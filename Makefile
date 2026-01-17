@@ -205,8 +205,8 @@ OPTS_BUSYTEX_COMPILE_wasm   = -DBUSYTEX_MAKEINDEX -DBUSYTEX_KPSE -DBUSYTEX_BIBTE
 #####COMMENT NEXT LINE TO TEST SHARED LIBRARY LOG FILE ACCESSES ON NATIVE
 OPTS_BUSYTEX_LINK = --static -static    -static-libstdc++ -static-libgcc
 
-OPTS_BUSYTEX_LINK_native =  $(OPTS_BUSYTEX_LINK)    -ldl -lm -pthread -lpthread -Wl,--unresolved-symbols=ignore-all -Wl,--allow-multiple-definition
-OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
+OPTS_BUSYTEX_LINK_native =  $(OPTS_BUSYTEX_LINK)    -ldl -lm -pthread -lpthread -Wl,--unresolved-symbols=ignore-all -Wl
+OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
 
 ##############################################################################################################################
 
@@ -243,7 +243,7 @@ source/texlive.patched: source/texlive.txt
 	sed -i '1i#include "cosmo_getpass.h"' $(abspath source/texlive/texk/dvipdfm-x/dvipdfmx.c)
 	
 	# Disable Lua bytecode preloading for WASM compatibility
-	find $(abspath source/texlive/texk/web2c/luatexdir) -name "*.c" -o -name "*.h" | xargs sed -i 's/lua_getbytecode/lua_getbytecode_disabled/g' || true
+	# find $(abspath source/texlive/texk/web2c/luatexdir) -name "*.c" -o -name "*.h" | xargs sed -i 's/lua_getbytecode/lua_getbytecode_disabled/g' || true
 	
 	touch $@
 
@@ -281,8 +281,8 @@ build/%/texlive.configured: source/texlive.patched
 	  --with-banner-add="_busytex$*"                    \
 	  --enable-cxx-runtime-hack=yes                     \
 	  --enable-arm-neon=no --enable-powerpc-vsx=no      \
-	  --disable-luajittex                               \
-	  --disable-mfluajit                                \
+# 	  --disable-luajittex                               \
+# 	  --disable-mfluajit                                \
 	    CFLAGS="$(CFLAGS_TEXLIVE_$*)"                   \
 	  CPPFLAGS="$(CFLAGS_TEXLIVE_$*)"                   \
 	  CXXFLAGS="$(CXXFLAGS_TEXLIVE_$*)"                 \
@@ -494,14 +494,14 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/fonts.conf
 	-mv $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/lualatex.fmt $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt
 	
-	# Rebuild LuaHBTeX format without bytecode for WASM compatibility
-	cd $(basename $@)/$(BINARCH_native) && \
-	env TEXMFDIST=$(ROOT)/$(basename $@)/texmf-dist \
-	    TEXMFVAR=$(ROOT)/$(basename $@)/texmf-dist/texmf-var \
-	    TEXMFCNF=$(ROOT)/$(basename $@)/texmf-dist/web2c \
-	./luahbtex -ini -jobname=luahblatex -progname=luahblatex -etex lualatex.ini && \
-	mkdir -p $(ROOT)/$(basename $@)/texmf-dist/texmf-var/web2c/luahbtex && \
-	mv luahblatex.fmt $(ROOT)/$(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/
+# 	# Rebuild LuaHBTeX format without bytecode for WASM compatibility
+# 	cd $(basename $@)/$(BINARCH_native) && \
+# 	env TEXMFDIST=$(ROOT)/$(basename $@)/texmf-dist \
+# 	    TEXMFVAR=$(ROOT)/$(basename $@)/texmf-dist/texmf-var \
+# 	    TEXMFCNF=$(ROOT)/$(basename $@)/texmf-dist/web2c \
+# 	./luahbtex -ini -jobname=luahblatex -progname=luahblatex -etex lualatex.ini && \
+# 	mkdir -p $(ROOT)/$(basename $@)/texmf-dist/texmf-var/web2c/luahbtex && \
+# 	mv luahblatex.fmt $(ROOT)/$(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/
 	
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)

@@ -106,6 +106,13 @@ make dist-native dist-wasm
 make clean
 ```
 
+To clean:
+
+```
+rm source/texlive.patched
+make clean  # Cleans both build and source directories
+```
+
 ### References
 - [busytex texlive 2025 update](https://github.com/SiglumProject/busytex)
 - [pdftex.js](https://github.com/dmonad/pdftex.js)
