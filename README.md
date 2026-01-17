@@ -1,4 +1,4 @@
-# Programs from TexLive 2023 compiled with Emscripten into a single fully static binary (x86_64-linux / WASM)
+# Programs from TexLive 2025 compiled with Emscripten into a single fully static binary (x86_64-linux / WASM)
 
 Currently compiles into a **fully static binary** (via musl on Alpine Linux):
 - xetex
@@ -35,8 +35,8 @@ sh example/example.sh
 ```
 
 ```shell
-wget http://mirrors.ctan.org/systems/texlive/Images/texlive2023-20230313.iso
-split -b2G -d texlive2023-20230313.iso texlive2023-20230313.iso.
+wget http://mirrors.ctan.org/systems/texlive/Images/texlive2025.iso
+split -b2G -d texlive2025.iso texlive2025.iso.
 ```
 
 ### Help needed
@@ -107,6 +107,7 @@ make clean
 ```
 
 ### References
+- [busytex texlive 2025 update](https://github.com/SiglumProject/busytex)
 - [pdftex.js](https://github.com/dmonad/pdftex.js)
 - [xetex.js](https://github.com/lyze/xetex-js)
 - [texlive.js](https://github.com/manuels/texlive.js/)
