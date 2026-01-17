@@ -28,7 +28,9 @@ jobs:
       - name: Build native busytex
         env:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
-        run:  make native
+        run:  |
+          rm -f build/native-texlive.cache build/wasm-texlive.cache
+          make native
       
       - name: Smoke native
         run:  make smoke-native
