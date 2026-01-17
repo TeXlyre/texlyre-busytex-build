@@ -6,7 +6,7 @@ on:
       busytexreleasetag:
         description: 'busytex release tag'
         required: false
-        default: 'build_native_418c9bc5edfd99fdb560cff956d3f10d3e598bcf_6949768401_1'
+        default: 'build_native_2b77a917194a20f7c3eccc052afb53365695ec46_21098740678_1'
 
 env:
   UBUNTUPACKAGES: texlive-latex-extra texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Install Prerequisites
-        run:  sudo apt-get install -y gperf p7zip-full strace icu-devtools
+        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools
 
       - uses: actions/checkout@v4
 
