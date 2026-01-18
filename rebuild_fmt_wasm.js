@@ -5,102 +5,196 @@ const profile = process.argv[2];
 const fmtDir = process.argv[3];
 
 async function rebuildFormats() {
+    const hostTexlive = `./build/texlive-${profile}`;
+
     console.log(`Loading busytex module...`);
     const BusytexModule = require('./build/wasm/busytex.js');
-
-    console.log(`Loading texlive-${profile} data package...`);
 
     const Module = await BusytexModule({
         locateFile: (filename, prefix) => {
             if (filename.endsWith('.wasm')) {
                 return './build/wasm/' + filename;
             }
-            if (filename.endsWith('.data')) {
-                return './build/wasm/texlive-' + profile + '.data';
-            }
             return prefix + filename;
         },
         noInitialRun: true,
+        thisProgram: '/bin/busytex',
         print: (text) => console.log(text),
-        printErr: (text) => console.error(text)
+        printErr: (text) => console.error(text),
     });
 
-    // The data package is automatically loaded by Emscripten via the .js file
-    // Check if texlive directory exists
-    console.log('Checking filesystem...');
-    try {
-        const texliveExists = Module.FS.analyzePath('/texlive').exists;
-        if (!texliveExists) {
-            console.error('ERROR: /texlive directory not found in WASM filesystem');
-            console.log('Root directory contents:');
-            console.log(Module.FS.readdir('/'));
-            process.exit(1);
+    console.log('Setting up base filesystem...');
+    ensureDir(Module.FS, '/bin');
+    Module.FS.writeFile('/bin/busytex', '');
+
+    ensureDir(Module.FS, '/etc');
+    Module.FS.writeFile('/etc/passwd', 'web_user:x:0:0:emscripten:/home/web_user:/bin/false\n');
+
+    console.log(`Copying ${hostTexlive} to /texlive...`);
+    let fileCount = 0;
+
+    function copyDir(hostDir, memfsDir) {
+        ensureDir(Module.FS, memfsDir);
+
+        const entries = fs.readdirSync(hostDir, { withFileTypes: true });
+        for (const entry of entries) {
+            const hostFullPath = path.join(hostDir, entry.name);
+            const memfsFullPath = memfsDir + '/' + entry.name;
+
+            if (entry.isDirectory()) {
+                copyDir(hostFullPath, memfsFullPath);
+            } else if (entry.isFile()) {
+                try {
+                    const content = fs.readFileSync(hostFullPath);
+                    Module.FS.writeFile(memfsFullPath, content);
+                    fileCount++;
+                    if (fileCount % 1000 === 0) {
+                        console.log(`  Copied ${fileCount} files...`);
+                    }
+                } catch (e) {
+                }
+            }
         }
-        console.log('/texlive directory found');
-    } catch (e) {
-        console.error('Error checking filesystem:', e);
-        process.exit(1);
     }
 
+    copyDir(hostTexlive, '/texlive');
+    console.log(`Copied ${fileCount} files total`);
+
+    console.log('\nSetting up environment...');
+    Module.ENV['TEXMFCNF'] = '/texlive/texmf-dist/web2c';
+    Module.ENV['TEXMFDIST'] = '/texlive/texmf-dist';
+    Module.ENV['TEXMFVAR'] = '/texlive/texmf-dist/texmf-var';
+    Module.ENV['TEXMFCONFIG'] = '/texlive/texmf-dist/texmf-config';
+    Module.ENV['TEXMFLOCAL'] = '/texlive/texmf-dist/texmf-local';
+    Module.ENV['TEXMFROOT'] = '/texlive';
+    Module.ENV['TEXMFHOME'] = '/texlive/texmf-dist';
+    Module.ENV['FONTCONFIG_PATH'] = '/texlive';
+    Module.ENV['FONTCONFIG_FILE'] = '/texlive/fonts.conf';
+
+    let lualatexIniPath = '/texlive/texmf-dist/tex/latex/tex-ini-files/lualatex.ini';
+    if (!Module.FS.analyzePath(lualatexIniPath).exists) {
+        const found = findFile(Module.FS, '/texlive', 'lualatex.ini', 6);
+        if (found.length > 0) {
+            lualatexIniPath = found.find(p => p.includes('texmf-dist')) || found[0];
+        }
+    }
+    console.log('Using lualatex.ini:', lualatexIniPath);
+
     const formats = {
-        'luahbtex/luahblatex.fmt': ['luahbtex', '-ini', '-jobname=luahblatex', '-progname=luahblatex', 'lualatex.ini'],
+        'luahbtex/luahblatex.fmt': {
+            args: ['luahbtex', '-ini', '-jobname=luahblatex', '-progname=luahblatex'],
+            iniFile: lualatexIniPath
+        },
     };
 
-    for (const [fmtPath, args] of Object.entries(formats)) {
-        console.log(`\nRebuilding ${fmtPath}...`);
+    for (const [fmtPath, config] of Object.entries(formats)) {
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`Rebuilding ${fmtPath}...`);
+
+        const args = [...config.args, config.iniFile];
         console.log(`Command: ${args.join(' ')}`);
 
         const fmtSubdir = path.dirname(fmtPath);
         const workDir = `/texlive/texmf-dist/texmf-var/web2c/${fmtSubdir}`;
 
-        console.log(`Target directory: ${workDir}`);
-        try {
-            const dirInfo = Module.FS.analyzePath(workDir);
-            if (!dirInfo.exists) {
-                console.error(`ERROR: Directory does not exist: ${workDir}`);
-                console.log('Creating directory...');
-                Module.FS.mkdirTree(workDir);
-            }
+        ensureDir(Module.FS, workDir);
+        Module.FS.chdir(workDir);
+        console.log(`Working directory: ${Module.FS.cwd()}`);
 
-            Module.FS.chdir(workDir);
-            console.log(`Working directory set to: ${Module.FS.cwd()}`);
-        } catch (e) {
-            console.error(`Failed to change directory: ${e.message}`);
-            console.log('Checking parent directories...');
-            try {
-                console.log('/texlive:', Module.FS.readdir('/texlive'));
-                console.log('/texlive/texmf-dist:', Module.FS.readdir('/texlive/texmf-dist'));
-            } catch (err) {
-                console.error('Cannot read parent directories:', err.message);
-            }
-            throw e;
-        }
+        const fmtFileName = path.basename(fmtPath);
 
         try {
-            console.log('Executing format generation...');
-            Module.callMain(args);
+            console.log('\nExecuting format generation...');
+            const exitCode = Module.callMain(args);
+            console.log(`\nExit code: ${exitCode}`);
 
-            const fmtFileName = path.basename(fmtPath);
-            console.log(`Reading generated format file: ${fmtFileName}`);
+            const filesInDir = Module.FS.readdir(workDir);
+            console.log(`Files in ${workDir}:`, filesInDir);
 
+            const fmtExists = Module.FS.analyzePath(workDir + '/' + fmtFileName).exists;
+
+            if (!fmtExists) {
+                const logPath = `${workDir}/luahblatex.log`;
+                if (Module.FS.analyzePath(logPath).exists) {
+                    const logContent = Module.FS.readFile(logPath, { encoding: 'utf8' });
+                    console.log('\n--- luahblatex.log (last 100 lines) ---');
+                    const lines = logContent.split('\n');
+                    console.log(lines.slice(-100).join('\n'));
+                    console.log('--- end of log ---\n');
+                }
+                throw new Error(`Format file ${fmtFileName} was not created`);
+            }
+
+            console.log(`Format file ${fmtFileName} exists, reading...`);
             const fmtFile = Module.FS.readFile(fmtFileName);
 
-            const outputPath = path.join(fmtDir, fmtPath);
-            console.log(`Writing to host filesystem: ${outputPath}`);
+            if (fmtFile.length < 1000) {
+                throw new Error(`Format file is too small (${fmtFile.length} bytes), likely invalid`);
+            }
 
+            const outputPath = path.join(fmtDir, fmtPath);
             fs.mkdirSync(path.dirname(outputPath), { recursive: true });
             fs.writeFileSync(outputPath, fmtFile);
 
             console.log(`✓ Successfully rebuilt ${fmtPath} (${fmtFile.length} bytes)`);
+
         } catch (e) {
-            console.error(`✗ Failed to rebuild ${fmtPath}:`, e);
-            if (e.message) console.error('Error message:', e.message);
-            if (e.stack) console.error('Stack:', e.stack);
+            console.error(`✗ Failed to rebuild ${fmtPath}:`, e.message || e);
             process.exit(1);
         }
     }
 
     console.log('\n✓ All formats rebuilt successfully');
+}
+
+function ensureDir(FS, dirPath) {
+    const parts = dirPath.split('/').filter(p => p);
+    let current = '';
+    for (const part of parts) {
+        current += '/' + part;
+        try {
+            const info = FS.analyzePath(current);
+            if (!info.exists) {
+                FS.mkdir(current);
+            }
+        } catch (e) {
+            try {
+                FS.mkdir(current);
+            } catch (e2) {
+            }
+        }
+    }
+}
+
+function findFile(FS, startPath, filename, maxDepth) {
+    const results = [];
+
+    function search(currentPath, depth) {
+        if (depth > maxDepth) return;
+
+        try {
+            const entries = FS.readdir(currentPath);
+            for (const entry of entries) {
+                if (entry === '.' || entry === '..') continue;
+
+                const fullPath = currentPath + '/' + entry;
+
+                try {
+                    const stat = FS.stat(fullPath);
+                    if (FS.isDir(stat.mode)) {
+                        search(fullPath, depth + 1);
+                    } else if (entry === filename) {
+                        results.push(fullPath);
+                    }
+                } catch (e) {
+                }
+            }
+        } catch (e) {
+        }
+    }
+
+    search(startPath, 0);
+    return results;
 }
 
 rebuildFormats().catch(e => {

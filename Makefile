@@ -207,7 +207,7 @@ OPTS_BUSYTEX_COMPILE_wasm   = -DBUSYTEX_MAKEINDEX -DBUSYTEX_KPSE -DBUSYTEX_BIBTE
 OPTS_BUSYTEX_LINK = --static -static    -static-libstdc++ -static-libgcc
 
 OPTS_BUSYTEX_LINK_native =  $(OPTS_BUSYTEX_LINK)    -ldl -lm -pthread -lpthread -Wl,--unresolved-symbols=ignore-all
-OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sNODERAWFS=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
+OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
 
 ##############################################################################################################################
 
@@ -515,9 +515,18 @@ build/wasm/texlive-%.js: build/texlive-%/texmf-dist
 	grep -r -I -h 'ProvidesPackage{' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
 	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
 
-build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/wasm/texlive-%.js
-	mkdir -p $(dir $@)
+build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt
+	mkdir -p build/wasm/
+	echo > build/empty
+	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
+	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js.tmp --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive
 	$(NODE) rebuild_fmt_wasm.js $* build/texlive-$*/texmf-dist/texmf-var/web2c
+	@echo "Rebuilding data package with new format files..."
+	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive
+	grep -r -I -h 'ProvidesPackage{' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > build/wasm/texlive-$*.js.providespackage.txt
+	cat build/wasm/texlive-$*.js.providespackage.txt build/wasm/texlive-$*.js > build/wasm/texlive-$*.js.tmp2
+	mv build/wasm/texlive-$*.js.tmp2 build/wasm/texlive-$*.js
+	rm -f build/wasm/texlive-$*.js.tmp
 	touch $@
 
 build/wasm/ubuntu/%.js: $(TEXMFFULL)
@@ -575,7 +584,6 @@ wasm:
 	$(MAKE) build/wasm/busytexapplets
 	$(MAKE) build/wasm/busytex.js
 	$(MAKE) build/texlive-basic.txt
-	$(MAKE) build/wasm/texlive-basic.js
 	$(MAKE) build/wasm/texlive-basic.fmt-rebuilt
 
 .PHONY: wasm-pdftex
