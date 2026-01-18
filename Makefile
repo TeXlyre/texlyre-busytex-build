@@ -39,6 +39,7 @@ BINARCH_native =bin/_custom
 
 PYTHON        = python3
 PERL          = perl
+NODE 		  := $(shell which node)
 MAKE_wasm     = emmake $(MAKE)
 CMAKE_wasm    = emcmake cmake
 CONFIGURE_wasm= $(EMROOT)/emconfigure
@@ -206,7 +207,7 @@ OPTS_BUSYTEX_COMPILE_wasm   = -DBUSYTEX_MAKEINDEX -DBUSYTEX_KPSE -DBUSYTEX_BIBTE
 OPTS_BUSYTEX_LINK = --static -static    -static-libstdc++ -static-libgcc
 
 OPTS_BUSYTEX_LINK_native =  $(OPTS_BUSYTEX_LINK)    -ldl -lm -pthread -lpthread -Wl,--unresolved-symbols=ignore-all
-OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
+OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sNODERAWFS=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
 
 ##############################################################################################################################
 
@@ -484,7 +485,7 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	$(foreach name,xetex luahbtex pdftex xelatex luahblatex pdflatex kpsewhich kpseaccess kpsestat kpsereadlink,printf "#!/bin/sh\n$(ROOT)/$(basename $@)/$(BINARCH_native)/busytex $(name)   $$"@ > $(basename $@)/$(BINARCH_native)/$(name) ; chmod +x $(basename $@)/$(BINARCH_native)/$(name); )
 	$(foreach name,mktexlsr.pl updmap-sys.sh updmap.pl fmtutil-sys.sh fmtutil.pl,mv $(basename $@)/texmf-dist/scripts/texlive/$(name) $(basename $@)/$(BINARCH_native)/$(basename $(name)); )
 	#mkdir -p $(ROOT)/source/texmfrepotmp; export TMPDIR=$(ROOT)/source/texmfrepotmp 
-	TEXLIVE_INSTALL_NO_RESUME=1 $(PERL) source/texmfrepo/install-tl --repository source/texmfrepo --profile build/texlive-$*.profile --custom-bin $(ROOT)/$(basename $@)/$(BINARCH_native) --no-doc-install --no-src-install # strace -f -s 128 
+	TEXLIVE_INSTALL_NO_RESUME=1 FMTUTIL_FMT_SKIP=1 $(PERL) source/texmfrepo/install-tl --repository source/texmfrepo --profile build/texlive-$*.profile --custom-bin $(ROOT)/$(basename $@)/$(BINARCH_native) --no-doc-install --no-src-install --no-format
 	# 
 	##printf "#!/bin/sh\n$(ROOT)/$(basename $@)/$(BINARCH_native)/busytex lualatex   $$"@ > $(basename $@)/$(BINARCH_native)/luahbtex
 	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/fonts.conf
@@ -492,19 +493,32 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
 	#find packfs -type f -executable -delete -o -name '*.ld' -delete -o -name '*.a' -delete -o -name '*.so' -delete -o -name '*.h' -delete -o -name '*.pod' -delete 
+	# Never ship native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
+	rm -f $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.fmt \
+	      $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.log \
+	      $(basename $@)/texmf-dist/texmf-var/web2c/luatex/*.fmt \
+	      $(basename $@)/texmf-dist/texmf-var/web2c/luatex/*.log
+	# --------------------------------------------------------------------------------
 	mkdir -p $(dir $@)
 	find $(basename $@) > $@
 	tar -czf $(basename $@).tar.gz $(basename $@)
 
+	
+
 ################################################################################################################
 
-build/wasm/texlive-%.js: build/texlive-%/texmf-dist 
+build/wasm/texlive-%.js: build/texlive-%/texmf-dist
 	mkdir -p $(dir $@)
 	echo > build/empty
 	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
 	$(PYTHON) $(EMROOT)/tools/file_packager.py $(basename $@).data --js-output=$@ --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive 
 	grep -r -I -h 'ProvidesPackage{' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
 	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
+
+build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/wasm/texlive-%.js
+	mkdir -p $(dir $@)
+	$(NODE) rebuild_fmt_wasm.js $* build/texlive-$*/texmf-dist/texmf-var/web2c
+	touch $@
 
 build/wasm/ubuntu/%.js: $(TEXMFFULL)
 	mkdir -p $(dir $@)
@@ -560,6 +574,9 @@ wasm:
 	$(MAKE) build/wasm/texlivedependencies
 	$(MAKE) build/wasm/busytexapplets
 	$(MAKE) build/wasm/busytex.js
+	$(MAKE) build/texlive-basic.txt
+	$(MAKE) build/wasm/texlive-basic.js
+	$(MAKE) build/wasm/texlive-basic.fmt-rebuilt
 
 .PHONY: wasm-pdftex
 wasm-pdftex:
@@ -653,3 +670,5 @@ download-native:
 	-ln -s $(shell which pkgdata) build/native/texlive/libs/icu/icu-build/bin/
 	#-$(CC_native) source/texlive/libs/freetype2/freetype-src/src/tools/apinames.c -o build/native/texlive/libs/freetype2/ft-build/apinames
 	chmod +x $(addprefix build/native/texlive/texk/web2c/, $(BUSYTEX_TEXBIN)) $(addprefix build/native/texlive/texk/web2c/web2c/, $(BUSYTEX_WEB2CBIN))
+
+
