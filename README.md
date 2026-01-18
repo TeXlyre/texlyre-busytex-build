@@ -72,20 +72,24 @@ cd emsdk
 source emsdk_env.sh
 
 # clone busytex
-git clone https://github.com/busytex/busytex
+git clone https://github.com/TeXlyre/texlyre-busytex
 cd busytex
 
 # set make parallelism
 export MAKEFLAGS=-j8
 
 # download and patch texlive into ./source
-make texlive
+make source/texlive.txt build/versions.txt
 
 # build native tools and fonts file into ./build/native
 make native
 
 # smoke test native binaries
 make test
+
+# build texlive
+make source/texmfrepo.txt
+make build/texlive-basic.txt build/texlive-full.txt
 
 # build wasm tools into ./build/wasm
 make wasm
@@ -108,10 +112,22 @@ make clean
 
 To clean:
 
-```
+```shell
 rm source/texlive.patched
 make clean  # Cleans both build and source directories
 ```
+
+### Run example
+
+To test the different texlive-basic versions of `pdftex`, `xetex`, and `luahbtex` (`texlive 2025`):
+
+```shell
+python3 example/example.py --port 8183
+```
+
+Then navigate to `http://localhost:8183/example/example.html`
+
+to use a newly built (from source) wasm, copy the contents of `./dist-wasm` to `./dist`
 
 ### References
 - [busytex texlive 2025 update](https://github.com/SiglumProject/busytex)

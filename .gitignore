@@ -8,7 +8,8 @@
 
 *.so
 
+emsdk/
 example/bibtex/
 build/
 source/
-dist/
+dist-wasm/
