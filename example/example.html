@@ -131,10 +131,19 @@ Blablabla said Nobody ~\cite{Nobody06}.
                 }
             }
 
-            worker.onmessage = ({ data: { pdf, log, print } }) => {
+            worker.onmessage = ({ data: { pdf, synctex, log, print } }) => {
                 if (pdf) {
                     let previewElement = document.getElementById('preview');
                     previewElement.src = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
+
+                    if (synctex && synctex.length > 0) {
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(new Blob([synctex], { type: 'application/gzip' }));
+                        link.download = 'example.synctex.gz';
+                        link.textContent = 'Download SyncTeX';
+                        link.style.marginLeft = '10px';
+                        document.getElementById('elapsed').parentNode.appendChild(link);
+                    }
 
                     let elapsedElement = document.getElementById('elapsed');
                     elapsedElement.innerText = ((performance.now() - tic) / 1000).toFixed(2) + ' sec';

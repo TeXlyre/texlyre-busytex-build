@@ -578,10 +578,11 @@ class BusytexPipeline {
         console.log('LOGS', logs);
 
         const pdf = exit_code == 0 ? this.read_all_bytes(FS, pdf_path) : null;
+        const synctex = exit_code == 0 ? this.read_all_bytes(FS, tex_path.replace('.tex', '.synctex.gz')) : null;
         const logcat = logs.map(({ cmd, texmflog, missfontlog, log, exit_code, stdout, stderr }) => ([`$ ${cmd}`, `EXITCODE: ${exit_code}`, '', 'TEXMFLOG:', texmflog, '==', 'MISSFONTLOG:', missfontlog, '==', 'LOG:', log, '==', 'STDOUT:', stdout, '==', 'STDERR:', stderr, '======'].join('\n'))).join('\n\n');
 
         this.Module = this.preload == false ? null : this.Module;
 
-        return { pdf: pdf, log: logcat, exit_code: exit_code, logs: logs };
+        return { pdf: pdf, synctex: synctex, log: logcat, exit_code: exit_code, logs: logs };
     }
 }
