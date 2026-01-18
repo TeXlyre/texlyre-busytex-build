@@ -1,5 +1,7 @@
 # Programs from TexLive 2025 compiled with Emscripten into a single fully static binary (x86_64-linux / WASM)
 
+Based on [busytex](https://github.com/busytex/busytex)
+
 Currently compiles into a **fully static binary** (via musl on Alpine Linux):
 - xetex
 - pdftex
