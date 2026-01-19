@@ -276,7 +276,7 @@ build/%/texlive.configured: source/texlive.patched
 	  --without-system-libpng                           \
 	  --without-system-zlib                             \
 	  --without-system-zziplib                          \
-	  --with-banner-add="_busytex$*"                    \
+	  --with-banner-add="_texlyre_busytex$*"            \
 	  --enable-cxx-runtime-hack=yes                     \
 	  --enable-arm-neon=no --enable-powerpc-vsx=no      \
 	    CFLAGS="$(CFLAGS_TEXLIVE_$*)"                   \
