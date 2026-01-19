@@ -80,7 +80,7 @@ cd emsdk
 source emsdk_env.sh
 
 # clone busytex
-git clone https://github.com/TeXlyre/texlyre-busytex
+git clone https://github.com/TeXlyre/texlyre-busytex-build
 cd busytex
 
 # set make parallelism
