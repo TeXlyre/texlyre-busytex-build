@@ -1,5 +1,7 @@
 # Programs from TexLive 2025 compiled with Emscripten into a single fully static binary (x86_64-linux / WASM)
 
+Based on [busytex](https://github.com/busytex/busytex)
+
 Currently compiles into a **fully static binary** (via musl on Alpine Linux):
 - xetex
 - pdftex
@@ -21,7 +23,13 @@ Future work:
 - mktexlsr, fmtutil, updmap (perl)
 
 ### License
-MIT
+
+This project is licensed under AGPL-3.0-or-later.
+
+Original work based on [busytex](https://github.com/busytex/busytex) (MIT License).
+Modifications and improvements by TeXlyre are licensed under AGPL-3.0-or-later.
+
+See [LICENSE](LICENSE) for AGPL-3.0 terms and [NOTICE](NOTICE) for detailed attribution.
 
 ### Usage
 ```shell
