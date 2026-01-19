@@ -1,0 +1,11 @@
+TeXlyre-BusyTeX
+Copyright (c) 2026 [Fares Abawi](https://abawi.me)
+
+This project is based on BusyTeX (https://github.com/busytex/busytex)
+Original BusyTeX work is MIT licensed.
+
+Modifications (AGPL-3.0 licensed) include:
+- Patches to LuaHBTeX for TeXlive 2025 compatibility
+- Fixes to TeXlive 2025 build process
+- Adds SyncTeX detection
+
