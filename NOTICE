@@ -5,7 +5,7 @@ This project is based on BusyTeX (https://github.com/busytex/busytex)
 Original BusyTeX work is MIT licensed.
 
 Modifications (AGPL-3.0 licensed) include:
-- LuaHBTeX build (broken in upstream BusyTeX since TeXlive 2022)
+- Fixes LuaHBTeX build (broken in upstream BusyTeX since TeXlive 2022)
 - Fixes to TeXlive 2025 build process
 - Adds SyncTeX detection
 
