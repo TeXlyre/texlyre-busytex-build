@@ -23,7 +23,13 @@ Future work:
 - mktexlsr, fmtutil, updmap (perl)
 
 ### License
-MIT
+
+This project is licensed under AGPL-3.0-or-later.
+
+Original work based on [busytex](https://github.com/busytex/busytex) (MIT License).
+Modifications and improvements by TeXlyre are licensed under AGPL-3.0-or-later.
+
+See [LICENSE](LICENSE) for AGPL-3.0 terms and [NOTICE](NOTICE) for detailed attribution.
 
 ### Usage
 ```shell
