@@ -97,7 +97,7 @@ make test
 
 # build texlive
 make source/texmfrepo.txt
-make build/texlive-basic.txt build/texlive-full.txt
+make build/texlive-basic.txt build/texlive-extra.txt build/texlive-full.txt
 
 # build wasm tools into ./build/wasm
 make wasm
@@ -110,6 +110,7 @@ sh example/example.sh
 
 # reproduce and pack Ubuntu TexLive packages into wasm data files
 make build/wasm/texlive-basic.js
+make build/wasm/texlive-extra.js
 
 # copies binaries and TexLive TDS into ./dist
 make dist-native dist-wasm

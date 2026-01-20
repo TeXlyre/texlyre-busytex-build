@@ -656,6 +656,8 @@ dist-wasm:
 	mkdir -p $@
 	-cp build/wasm/busytex.js       build/wasm/busytex.wasm       $@ 
 	-cp build/wasm/texlive-basic.js build/wasm/texlive-basic.data $@ 
+	-cp build/wasm/texlive-extra.js build/wasm/texlive-extra.data $@
+	-cp build/wasm/texlive-basic.js.providespackage.txt build/wasm/texlive-extra.js.providespackage.txt $@
 	-cp build/wasm/ubuntu/*.js      build/wasm/ubuntu/*.data      $@ 
 
 dist-native-full: build/native/busytex
