@@ -37,6 +37,7 @@ PREFIX_native        = $(abspath build/native/prefix)
 
 BINARCH_native =bin/_custom
 
+COLLECTIONS   = langchinese fontsrecommended bibtexextra pictures langenglish langeuropean langcjk mathscience
 PYTHON        = python3
 PERL          = perl
 NODE 		  := $(shell which node)
@@ -465,7 +466,16 @@ build/texlive-extra.profile:
 	echo "collection-latex  1"                                         >> $@ 
 	echo "collection-luatex 1"                                         >> $@ 
 	echo "collection-latexrecommended  1"                              >> $@ 
-	echo "collection-latexextra  1"                                    >> $@ 
+	echo "collection-latexextra  1"                                     >> $@ 
+
+build/collection-%.profile:
+	mkdir -p $(dir $@)
+	echo selected_scheme scheme-basic                                        > $@
+	echo TEXDIR $(ROOT)/build/collection-$*                                 >> $@ 
+	echo TEXMFLOCAL $(ROOT)/build/collection-$*/texmf-dist/texmf-local      >> $@
+	echo TEXMFSYSVAR $(ROOT)/build/collection-$*/texmf-dist/texmf-var       >> $@ 
+	echo TEXMFSYSCONFIG $(ROOT)/build/collection-$*/texmf-dist/texmf-config >> $@ 
+	echo "collection-$*  1"                                                 >> $@
 
 build/texlive-full.profile:
 	mkdir -p $(dir $@)
@@ -503,6 +513,19 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	find $(basename $@) > $@
 	tar -czf $(basename $@).tar.gz $(basename $@)
 
+build/collection-%.txt: build/collection-%.profile source/texmfrepo.txt
+	$(BUSYTEX_native)
+	mkdir -p build/collection-$*/$(BINARCH_native)
+	cp $(BUSYTEX_native) build/collection-$*/$(BINARCH_native) 
+	$(foreach name,texlive-scripts latexconfig tex-ini-files,tar -xf source/texmfrepo/archive/$(name).r*.tar.xz -C build/collection-$*; )
+	$(foreach name,xetex luahbtex pdftex xelatex luahblatex pdflatex kpsewhich kpseaccess kpsestat kpsereadlink,printf "#!/bin/sh\n$(ROOT)/build/collection-$*/$(BINARCH_native)/busytex $(name)   $$"@ > build/collection-$*/$(BINARCH_native)/$(name) ; chmod +x build/collection-$*/$(BINARCH_native)/$(name); )
+	$(foreach name,mktexlsr.pl updmap-sys.sh updmap.pl fmtutil-sys.sh fmtutil.pl,mv build/collection-$*/texmf-dist/scripts/texlive/$(name) build/collection-$*/$(BINARCH_native)/$(basename $(name)); )
+	TEXLIVE_INSTALL_NO_RESUME=1 $(PERL) source/texmfrepo/install-tl --repository source/texmfrepo --profile build/collection-$*.profile --custom-bin $(ROOT)/build/collection-$*/$(BINARCH_native) --no-doc-install --no-src-install
+	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > build/collection-$*/fonts.conf
+	rm -rf $(addprefix build/collection-$*/texmf-dist/texmf-var/web2c/, pdftex/*.fmt pdftex/*.log xetex/*.fmt xetex/*.log luahbtex/*.fmt luahbtex/*.log luatex/*.fmt luatex/*.log) $(addprefix build/collection-$*/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
+	find build/collection-$* > $@
+	tar -czf build/collection-$*.tar.gz build/collection-$*
+
 	
 
 ################################################################################################################
@@ -512,7 +535,7 @@ build/wasm/texlive-%.js: build/texlive-%/texmf-dist
 	echo > build/empty
 	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
 	$(PYTHON) $(EMROOT)/tools/file_packager.py $(basename $@).data --js-output=$@ --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive 
-	grep -r -I -h 'ProvidesPackage{' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
+	grep -r -I -h -E '\\Provides(Expl)?(Package|Class|File)' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
 	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
 
 build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt
@@ -528,6 +551,14 @@ build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt
 	mv build/wasm/texlive-$*.js.tmp2 build/wasm/texlive-$*.js
 	rm -f build/wasm/texlive-$*.js.tmp
 	touch $@
+
+build/wasm/collection-%.js: build/collection-%.txt
+	mkdir -p $(dir $@)
+	echo > build/empty
+	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
+	$(PYTHON) $(EMROOT)/tools/file_packager.py $(basename $@).data --js-output=$@ --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/collection-$*@/texlive 
+	grep -r -I -h -E '\\Provides(Expl)?(Package|Class|File)' build/collection-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
+	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
 
 build/wasm/ubuntu/%.js: $(TEXMFFULL)
 	mkdir -p $(dir $@)
@@ -650,6 +681,8 @@ clean-dist:
 clean-example:
 	rm -rf example/*.aux example/*.bbl example/*.blg example/*.log example/*.xdv
 ################################################################################################################
+.PHONY: collections-wasm
+collections-wasm: $(foreach collection,$(COLLECTIONS),build/wasm/collection-$(collection).js)
 
 .PHONY: dist-wasm dist-native dist-native-full download-native
 dist-wasm:
@@ -659,6 +692,8 @@ dist-wasm:
 	-cp build/wasm/texlive-extra.js build/wasm/texlive-extra.data $@
 	-cp build/wasm/texlive-basic.js.providespackage.txt build/wasm/texlive-extra.js.providespackage.txt $@
 	-cp build/wasm/ubuntu/*.js      build/wasm/ubuntu/*.data      $@ 
+	-cp build/wasm/collection-*.js  build/wasm/collection-*.data  $@
+	-cp build/wasm/collection-*.js.providespackage.txt            $@ 
 
 dist-native-full: build/native/busytex
 	mkdir -p $@
