@@ -467,6 +467,7 @@ build/texlive-extra.profile:
 	echo "collection-luatex 1"                                         >> $@ 
 	echo "collection-latexrecommended  1"                              >> $@ 
 	echo "collection-latexextra  1"                                     >> $@ 
+	echo "collection-langchinese  1"                                     >> $@ 
 
 build/collection-%.profile:
 	mkdir -p $(dir $@)

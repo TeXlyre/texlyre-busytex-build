@@ -116,14 +116,8 @@ make build/wasm/texlive-extra.js
 make dist-native dist-wasm
 
 # remove ./build and ./source completely
-make clean
-```
-
-#### To clean:
-
-```shell
 rm source/texlive.patched
-make clean  # Cleans both build and source directories
+make clean
 ```
 
 #### To add new packages, you have two options:
@@ -131,6 +125,7 @@ make clean  # Cleans both build and source directories
 **Option 1: Add to texlive-extra profile (for bundled packages)**
 
 Modify `build/texlive-extra.profile` target in the Makefile to add collections, then run:
+
 ```shell
 rm build/texlive-extra.profile build/texlive-extra.txt build/texlive-extra.tar.gz
 rm -rf build/texlive-extra/
@@ -142,7 +137,11 @@ make dist-wasm
 **Option 2: Build individual collections (recommended for modularity)**
 
 Add the collection name to `COLLECTIONS` variable in the Makefile, then run:
+
 ```shell
+rm -rf build/collection-*
+rm -rf build/wasm/collection-*
+
 # Build specific collection (e.g., langchinese)
 make build/wasm/collection-langchinese.js
 
