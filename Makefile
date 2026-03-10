@@ -2,17 +2,15 @@
 # http://www.linuxfromscratch.org/blfs/view/svn/pst/texlive.html
 # https://www.tug.org/texlive//devsrc/Master/texmf-dist/tex/latex/
 
-# TL2025 URLs
-URL_texlive_full_iso = https://mirror.ctan.org/systems/texlive/Images/texlive2025.iso
-URL_texlive_full_iso_cache = https://mirror.ctan.org/systems/texlive/Images/texlive2025.iso
-URL_texlive          = https://github.com/TeX-Live/texlive-source/archive/refs/heads/tags/texlive-2025.0.tar.gz
+# TL2026 URLs
+URL_texlive_full_iso = https://mirror.ctan.org/systems/texlive/Images/texlive2026.iso
+URL_texlive_full_iso_cache = https://mirror.ctan.org/systems/texlive/Images/texlive2026.iso
+URL_texlive = https://github.com/TeX-Live/texlive-source/archive/refs/heads/tags/texlive-2026.0.tar.gz
 # Old TL2023 URLs (commented out)
 #URL_texlive_full_iso = https://tug.ctan.org/systems/texlive/Images/texlive2023-20230313.iso
 #URL_texlive_full_iso_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/texlive2023-20230313.iso.00 ...
 URL_expat            = https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz
 URL_fontconfig       = https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.13.96.tar.gz
-URL_ubuntu_release   = https://packages.ubuntu.com/noble/
-URL_ubuntu_release_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/
 
 BUSYTEX_BIN          = busytex busytexextra
 BUSYTEX_TEXBIN       = ctangle otangle tangle tangleboot ctangleboot tie
@@ -21,7 +19,7 @@ BUSYTEX_WEB2CBIN     = fixwrites makecpool splitup web2c
 
 # Dynamic memory: start small, grow as needed
 INITIAL_MEMORY       = 67108864    # 64MB initial
-MAXIMUM_MEMORY       = 536870912   # 512MB max
+MAXIMUM_MEMORY       = 603979776   # 576MB max
 CFLAGS_OPT_native    = -O3
 # Explicitly enable exceptions and RTTI in case they are disabled by default (such as in Cosmopolitan Libc).
 CXXFLAGS_native      = -fexceptions -frtti
@@ -37,7 +35,6 @@ PREFIX_native        = $(abspath build/native/prefix)
 
 BINARCH_native =bin/_custom
 
-COLLECTIONS   = langchinese fontsrecommended bibtexextra pictures langenglish langeuropean langcjk mathscience
 PYTHON        = python3
 PERL          = perl
 NODE 		  := $(shell which node)
@@ -70,7 +67,7 @@ CPATH_BUSYTEX = texlive/libs/icu/include fontconfig
 ##############################################################################################################################
 
 #OBJ_LUAHBTEX = luatexdir/luahbtex-luatex.o luatexdir/luatex-luatex.o    mplibdir/luahbtex-lmplib.o mplibdir/luatex-lmplib.o    libluahbtexspecific.a libluatexspecific.a     libluaharfbuzz.a  busytex_libluahbtex.a busytex_libluatex.a   libff.a libluamisc.a libluasocket.a libluaffi.a libmplibcore.a libmputil.a libunilib.a libmd5.a lib/lib.a
-OBJ_LUAHBTEX  = luatexdir/luahbtex-luatex.o mplibdir/luahbtex-lmplib.o libluahbtexspecific.a libluaharfbuzz.a  busytex_libluahbtex.a libff.a libluamisc.a libluasocket.a libluaffi.a libmplibcore.a libmputil.a libunilib.a libmd5.a lib/lib.a
+OBJ_LUAHBTEX  = luatexdir/luahbtex-luatex.o mplibdir/luahbtex-lmplib.o libluahbtexspecific.a libluaharfbuzz.a  libluaharfbuzzsubset.a  busytex_libluahbtex.a libff.a libluamisc.a libluasocket.a libluaffi.a libmplibcore.a libmputil.a libunilib.a libmd5.a lib/lib.a
 OBJ_LUATEX    = luatexdir/luatex-luatex.o   mplibdir/luatex-lmplib.o  libluatexspecific.a                     busytex_libluatex.a libff.a libluamisc.a libluasocket.a libluaffi.a libmplibcore.a libmputil.a libunilib.a libmd5.a lib/lib.a 
 OBJ_PDFTEX    = synctexdir/pdftex-synctex.o pdftex-pdftexini.o pdftex-pdftex0.o pdftex-pdftex-pool.o pdftexdir/pdftex-pdftexextra.o lib/lib.a libmd5.a busytex_libpdftex.a
 OBJ_XETEX     = synctexdir/xetex-synctex.o xetex-xetexini.o xetex-xetex0.o xetex-xetex-pool.o xetexdir/xetex-xetexextra.o lib/lib.a libmd5.a busytex_libxetex.a
@@ -83,7 +80,6 @@ OBJ_DEPS      = $(addprefix texlive/libs/, harfbuzz/libharfbuzz.a graphite2/libg
 
 OBJ_DEPS_XETEX= fontconfig/src/.libs/libfontconfig.a $(addprefix texlive/libs/, icu/icu-build/lib/libicuuc.a icu/icu-build/lib/libicudata.a) 
 
-
 ##############################################################################################################################
 
 # redefines needed until wasm-ld supports --localize-hidden: https://bugs.llvm.org/show_bug.cgi?id=51279
@@ -95,7 +91,8 @@ BIBTEX_REDEFINE = initialize eoln last history bad xchr buffer close_file usage 
 SYNCTEX_REDEFINE = synctex_ctxt synctex_dot_open synctex_record_node_char synctex_record_node_kern synctex_record_node_math synctex_record_node_unknown synctexabort synctexchar synctexcurrent synctexhlist synctexhorizontalruleorglue synctexinitcommand synctexkern synctexmath synctexmrofxfdp synctexnode synctexoption synctexpdfrefxform synctexpdfxform synctexsheet synctexstartinput synctexteehs synctexterminate synctextsilh synctextsilv synctexvlist synctexvoidhlist synctexvoidvlist
 
 PDFTEX_REDEFINE = initialize getstringsstarted sortavail zprimitive znewtrieop ztrienode zcompresstrie zfirstfit ztriepack ztriefix newpatterns inittrie zlinebreak newhyphexceptions zdomarks prefixedcommand storefmtfile loadfmtfile finalcleanup initprim mainbody println zprintchar zprint zprintnl zprintesc zprintthedigs zprintint zprintcs zsprintcs zprintfilename zprintsize zprintwritewhatsit zprintsanum zprintcsnames printfileline initterminal zstreqbuf zstreqstr zsearchstring zprinttwo zprinthex zprintromanint printcurrentstring zhalf zrounddecimals zprintscaled zmultandadd zxovern zxnoverd zbadness zmakefrac ztakefrac zabvscd newrandoms zinitrandoms zunifrand zshowtokenlist runaway zflushlist zfreenode zroundxnoverd zprevrightmost zflushstr getmicrointerval zshortdisplay zprintfontandchar zprintmark zprintruledimen zprintglue zprintspec zprintfamandchar zprintdelimiter zprintstyle zprintskipparam zdeletetokenref zdeleteglueref zprintmode zprintinmode popnest zprintparam begindiagnostic zenddiagnostic zprintlengthparam zprintcmdchr zprintgroup zgrouptrace pseudoclose zdeletesaref ztokenshow printmeaning showcurcmdchr showcontext groupwarning ifwarning filewarning endfilereading clearforerrorprompt zeffectivechar zaddorsub zquotient zfract beginname zpackfilename zpackbufferedname zpackjobname zeffectivecharinfo zprunemovements zshortdisplayn zcharpw zheightplusdepth zmathkern popalignment showsavegroups printtotals zfreezepagespecs youcant znormmin trapzeroglue newinteraction giveerrhelp openfmtfile closefilesandterminate zdvifour preparemag dviswap zdvifontdef zfatalerror zoverflow jumpout normalizeselector error makestring slowmakestring getavail zgetnode newnullbox zcharbox zstackintobox zvardelimiter zmakeleftright newrule znewmath znewspec znewparamglue znewglue zappendtovlist znewkern znewpenalty znewindex newnoad indentinhmode zmathglue pushalignment znewwhatsit zfractionrule fixlanguage appenditaliccorrection znewskipparam appspace pushnest zidlookup zprimlookup pseudoinput znewsavelevel zeqsave zbegintokenlist beginfilereading zstrtoks insertsrcspecial appendsrcspecial zmorename endname znewedge znewstyle newchoice znewligature znewligitem newdisc zsasave zfindsaelement zsaveforafter makenamestring zamakenamestring zzwmakenamestring zbmakenamestring zpromptfilename terminput openlogfile firmuptheline zdvipop zmovement zspecialout getnext checkoutervalidity endtokenlist gettoken zinterror pauseforinstructions zreconstitute backinput insertrelax inserror initcol zmlog backerror muerror zcharwarning znewcharacter zfetch zmakeord zfiniteshrink reportillegalcase extrarightbrace noalignerror omiterror cserror mathlimitswitch insertdollarsign offsave headforvmode alignerror zeTeXenabled normrand privileged passtext getrtoken macrocall zreadtoks zpushmath zconfusion zflushnodelist zsadestroy zeqdestroy flushmath hyphenate zcopynodelist zchangeiflimit zzreverse zmakevcenter zprunepagetop zvertbreak deletelast zjustcopy zjustreverse zfinmlist zpdferror ztokenstostring zshownodelist zprintsubsidiarydata zshowbox zvpackage zoverbar zvsplit zshoweqtb zrestoretrace zeqdefine zeqworddefine normalparagraph zinitspan initrow endgraf starteqno zgeqdefine zgeqworddefine zshowsa zsadef zsawdef zgsadef zgsawdef sarestore unsave showinfo zboxerror showactivities zensurevbox zreadfontinfo znewmarginkern zpushnode zfindprotcharleft popnode zhpack zrebox zcleanbox mlisttohlist zmakescripts zmakeover zmakeunder zmakeradical zmakemathaccent zmakefraction zmakeop zappdisplay zfindprotcharright ztotalpw ztrybreak zpostlinebreak scanfilenamebraced scanfilename getxtoken expand startinput thetoks conditional convtoks scanregisternum pseudostart zscankeyword xtoken getxorprotected fincol doassignments scanoptionalequals zsetmathchar scanleftbrace scangeneraltext appenddiscretionary builddiscretionary appendchoices buildchoices shiftcase scanfontident scanint zfindfontdimen zscansomethinginternal scancharnum zscanglue scanexpr scaneightbitint begininsertoradjust scanfourbitint scanfifteenbitint unpackage scanfourbitintor18 alterprevgraf alterinteger znewwritewhatsit makeaccent zscanmath subsup mathac mathradical zscandimen scannormalglue scanmuglue appendglue getpreambletoken appendkern insthetoks showwhatever zscantoks comparestrings zwriteout zoutwhat vlistout hlistout zshipout zfireup buildpage itsallover znewgraf appendpenalty initmath resumeafterdisplay aftermath finalign alignpeek finrow doendv zboxend zpackage handlerightbrace makemark issuemessage scanpdfexttoks scanrulespec zscanspec zbeginbox zscanbox zdoregistercommand alterpagesofar alterboxdimen initalign zscandelimiter mathfraction mathleftright alteraux znewfont openorclosein doextension maincontrol getnullstr loadpoolstrings generic_synctex_get_current_name runsystem texmf_yesno maininit topenin ipcpage open_in_or_pipe open_out_or_pipe close_file_or_pipe init_start_time get_date_and_time get_seconds_and_micros input_line calledit do_dump do_undump makefullnamestring getjobname gettexstring isnewsource remembersourceinfo makesrcspecial initstarttime find_input_file getcreationdate getfilemoddate getfilesize getfiledump convertStringToHexString getmd5sum pdftex_fail maketexstring initversionstring fixdateandtime     shellenabledp restrictedshell argv argc interactionoption dump_name filelineerrorstylep parsefirstlinep translate_filename default_translate_filename readyalready etexp TEXformatdefault formatdefaultlength outputcomment dumpoption insertsrcspecialauto insertsrcspecialeverypar srcspecialsp dumpline buffer first last strstart outputfilename strpool xchr interrupt bufsize maxbufstack inputptr inputstack inopen inputfile poolptr poolsize start_time_str   iniversion mltexp              insertsrcspecialeveryparend insertsrcspecialeverycr insertsrcspecialeverymath insertsrcspecialeveryhbox insertsrcspecialeveryvbox insertsrcspecialeverydisplay bad bounddefault boundname membot mainmemory extramembot memmin memtop extramemtop memmax errorline halferrorline maxprintline maxstrings stringsfree stringvacancies poolfree fontmemsize fontmax fontk hyphsize triesize stacksize maxinopen paramsize nestsize savesize dvibufsize expanddepth eightbitp haltonerrorp quotedfilename strptr initpoolptr initstrptr poolfile logfile selector dig tally termoffset fileoffset trickbuf trickcount firstcount interaction deletionsallowed setboxallowed history errorcount helpline helpptr useerrhelp OKtointerrupt aritherror texremainder randoms jrandom randomseed twotothe speclog tempptr yzmem zmem lomemmax himemmin varused dynused avail memend rover fontinshortdisplay depththreshold breadthmax nest nestptr maxneststack curlist shownmode oldsetting systime sysday sysmonth sysyear zeqtb zzzaa zzzab hash yhash hashused hashextra hashtop eqtbtop hashhigh nonewcontrolsequence cscount prim primused savestack saveptr maxsavestack curlevel curgroup curboundary magset curcmd curchr curcs curtok maxinstack curinput openparens line linestack sourcefilenamestack fullsourcefilenamestack scannerstatus warningindex defref paramstack paramptr maxparamstack alignstate baseptr parloc partoken forceeof isincsname curmark longstate pstack curval curvallevel radix curorder readfile readopen condptr iflimit curif ifline skipline curname curarea curext areadelimiter extdelimiter nameinprogress jobname logopened dvifile texmflogname tfmfile fontinfo fmemptr fontptr fontcheck fontsize fontdsize fontparams fontname fontarea fontbc fontec fontglue fontused hyphenchar skewchar bcharlabel fontbchar fontfalsebchar charbase widthbase heightbase depthbase italicbase ligkernbase kernbase extenbase parambase nullcharacter totalpages maxv maxh maxpush lastbop deadcycles doingleaders             discwidth bestplline bestplace minimaldemerits breakwidth background curactivewidth activewidth hliststack totalshrink totalstretch readopen readfile pstack curmark prim zzzaa speclog twotothe randoms helpline trickbuf dig xord dvibuf halfbuf dvilimit dviptr dvioffset dvigone downptr rightptr dvih dviv curh curv dvif curs epochseconds microseconds totalstretch totalshrink lastbadness adjusttail lastleftmostchar lastrightmostchar hliststack hliststacklevel preadjusttail packbeginline emptyfield nulldelimiter curmlist curstyle cursize curmu mlistpenalties curf curc curi magicoffset curalign curspan curloop alignptr curhead curtail curprehead curpretail justbox passive printednode passnumber activewidth curactivewidth background breakwidth firstp noshrinkerroryet curp secondpass finalpass threshold minimaldemerits minimumdemerits bestplace bestplline discwidth easyline lastspecialline firstwidth secondwidth firstindent secondindent bestbet fewestdemerits bestline actuallooseness linediff       trieused trieoplang trieopval trieopptr maxopused smallop triec trieo triel trier trieptr triehash trietaken triemin triemax trienotready bestheightplusdepth pagetail pagecontents pagemaxdepth bestpagebreak leastpagecost bestsize pagesofar lastglue lastpenalty lastkern lastnodetype insertpenalties outputactive mainf maini mainj maink mainp mains bchar falsebchar cancelboundary insdisc curbox aftertoken longhelpseen formatident fmtfile writefile writeopen writeloc pdflastxpos pdflastypos curpagewidth curpageheight curhoffset curvoffset eTeXmode eofseen LRptr LRproblems curdir pseudofiles grpstack ifstack maxregnum maxreghelpline saroot curptr sanull sachain salevel lastlinefill dolastlinefit activenodesize fillwidth bestplshort bestplglue hyphstart hyphindex discptr editnamestart editnamelength editline ipcon stopatspace savestrptr savepoolptr     debugformatfile expanddepthcount mltexenabledp accentc basec replacec baseslant accentslant basexheight basewidth baseheight accentwidth accentheight delta synctexoffset xord discptr bestplglue bestplshort fillwidth saroot pagesofar triemin trieopval trieoplang trieused opstart hyfnext hyfnum hyfdistance    initlhyf initrhyf hyfbchar hyf initlist initlig initlft hyphenpassed curl curr curq ligstack ligaturepresent lfthit rthit trietrl trietro trietrc hyfdistance hyfnum hyfnext opstart hyphword hyphlist hyphlink hyphcount   ruleht ruledp rulewd hyfchar curlang initcurlang     lq lr  hc hn ha hb hf hu    iac ibc    hyf   c f g k l t      writefile       lhyf rhyf hyphnext writeopen    lhyf rhyf hyphnext   writeopen     t1_line_array t1_free get_fe_entry enc_free  fe_tree t1_buf_array load_enc_file t1_line_ptr t1_length3 t1_encoding t1_length1 t1_buf_limit t1_buf_ptr t1_line_limit t1_length2 haltingonerrorp max_print_line
-PDFTEX_REDEFINE += zisbitset savearitherror outputcanend
+# TL2025 and TL2026 specific
+PDFTEX_REDEFINE += zisbitset savearitherror outputcanend oldselectorignorederr
 
 LUATEX_REDEFINE = init_start_time topenin get_date_and_time get_seconds_and_micros input_line getjobname err runaway unpackage privileged initialize maketexstring makecstring open_in_or_pipe open_out_or_pipe close_file_or_pipe new_fm_entry delete_fm_entry avl_do_entry mitem check_std_t1font pdfmapfile pdfmapline check_ff_exist is_subsetable fm_free glyph_unicode_free write_tounicode zip_free pdf_printf convertStringToPDFString getcreationdate matrixused getllx getlly geturx getury matrixtransformrect matrixtransformpoint matrixrecalculate libpdffinish conditional unsave expand fd_tree  fo_tree  new_fd_entry lookup_fd_entry register_fd_entry get_unsigned_byte get_unsigned_pair read_jbig2_info write_jbig2 read_jpg_info write_jpg read_png_info write_png colorstackused newcolorstack colorstackcurrent colorstackpop colorstackskippagestart ttf_free writettf writeotf read_pdf_info write_epdf epdf_free make_subset_tag tex_printf xfwrite xfflush xgetc xputc initversionstring char_array selector strstart strstart error notdef mac_glyph_names ambiguous_names cur_file_name t3_line_array     t3_file t3_line_ptr t3_line_limit ttf_length first last buffer epochseconds microseconds     argc argv dump_name interaction interactionoption history interrupt pstack synctexoffset shellenabledp restrictedshell line parsefirstlinep filelineerrorstylep haltonerrorp nest radix hash rover avail char_ptr char_limit tally dig    g nameoffile namelength   write_fontencodings writet1              mk_shellcmdlist get_start_time set_start_time init_shell_escape shell_cmd_is_allowed normalize_quotes getrandomseed luatex_revision engine_name luatex_version_string luaopen_mplib luatex_version   c_job_name luatex_banner haltingonerrorp max_print_line
 
@@ -208,7 +205,7 @@ OPTS_BUSYTEX_COMPILE_wasm   = -DBUSYTEX_MAKEINDEX -DBUSYTEX_KPSE -DBUSYTEX_BIBTE
 OPTS_BUSYTEX_LINK = --static -static    -static-libstdc++ -static-libgcc
 
 OPTS_BUSYTEX_LINK_native =  $(OPTS_BUSYTEX_LINK)    -ldl -lm -pthread -lpthread -Wl,--unresolved-symbols=ignore-all
-OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
+OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]' --js-library $(ROOT)/kpse_remote.js -Wl,--wrap=kpse_find_file
 
 ##############################################################################################################################
 
@@ -223,26 +220,16 @@ source/texlive.txt source/expat.txt source/fontconfig.txt:
 	curl -L $(URL_$(notdir $(basename $@))) | tar -xzf - -C $(basename $@) --strip-components=1
 	find $(basename $@) > $@
 
-# source/texmfrepo.txt:
-# 	mkdir -p $(basename $@)
-# 	curl -L $(URL_texlive_full_iso_cache) | bsdtar -x -C $(basename $@)
-# 	find $(basename $@) > $@
 source/texmfrepo.txt:
 	mkdir -p $(basename $@)
-	@if [ ! -f source/texlive2025.iso ]; then \
-		echo "Downloading TeX Live 2025 ISO (6+ GB)..."; \
-		curl -L -o source/texlive2025.iso $(URL_texlive_full_iso) || wget -O source/texlive2025.iso $(URL_texlive_full_iso); \
+	@if [ ! -f source/texlive2026.iso ]; then \
+		echo "Downloading TeX Live 2026 ISO (6+ GB)..."; \
+		curl -L -o source/texlive2026.iso $(URL_texlive_full_iso) || wget -O source/texlive2026.iso $(URL_texlive_full_iso); \
 	fi
-	bsdtar -xf source/texlive2025.iso -C $(basename $@)
+	bsdtar -xf source/texlive2026.iso -C $(basename $@)
 	find $(basename $@) > $@
 
 source/texlive.patched: source/texlive.txt
-	# Cosmopolitan Libc doesn't support arguments with spaces; remove an extra trailing space here:
-	# https://github.com/TeX-Live/texlive-source/blob/tags/texlive-2023.0/libs/icu/icu-src/source/common/Makefile.in#L72
-	sed -i 's@" "@""@' $(abspath source/texlive/libs/icu/icu-src/source/common/Makefile.in)
-	# See the contents of `cosmo_getpass.h` for more details.
-	cp cosmo_getpass.h                    $(abspath source/texlive/texk/dvipdfm-x/cosmo_getpass.h)
-	sed -i '1i#include "cosmo_getpass.h"' $(abspath source/texlive/texk/dvipdfm-x/dvipdfmx.c)
 	touch $@
 
 build/%/texlive.configured: source/texlive.patched
@@ -374,30 +361,36 @@ build/%/texlive/texk/bibtex-x/busytex_bibtex8.a: build/%/texlive.configured
 
 build/%/busytex build/%/busytex.js:
 	mkdir -p $(dir $@)
-	$(CC_$*)  -o    $(basename $@).o -c busytex.c  $(OPTS_BUSYTEX_COMPILE_$*) $(CFLAGS_OPT_$*)
-	$(CXX_$*) -o $@ $(basename $@).o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
+	$(CC_$*)  -o    $(basename $@).o -c busytex.c  $(OPTS_BUSYTEX_COMPILE_$*) $(CFLAGS_OPT_$*) -I$(abspath build/$*/texlive/libs/icu/include)
+	$(CC_$*)  -o    build/$*/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_$*)
+# 	$(CXX_$*) -o $@ $(basename $@).o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
+	$(CXX_$*) -o $@ $(basename $@).o build/$*/kpse_remote.o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
 	tar -cf $(basename $@).tar build/$*/texlive/texk/web2c/*.c
 
 # Minimal pdfTeX-only build
 OBJ_DEPS_PDFTEX = $(addprefix texlive/libs/, libpng/libpng.a pplib/libpplib.a zlib/libz.a zziplib/libzzip.a xpdf/libxpdf.a) texlive/texk/kpathsea/.libs/libkpathsea.a
-OPTS_BUSYTEX_LINK_PDFTEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=16777216 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=pdftex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
+OPTS_BUSYTEX_LINK_PDFTEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=16777216 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=pdftex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]' --js-library $(ROOT)/kpse_remote.js -Wl,--wrap=kpse_find_file
 
 build/wasm/pdftex.js:
 	mkdir -p $(dir $@)
 	$(CC_wasm) -o build/wasm/pdftex.o -c busytex.c -DBUSYTEX_PDFTEX $(CFLAGS_OPT_wasm)
-	$(CXX_wasm) -o $@ build/wasm/pdftex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_PDFTEX)) $(addprefix build/wasm/, $(OBJ_DEPS_PDFTEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_PDFTEX_wasm)
+	$(CC_wasm) -o build/wasm/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_wasm)
+# 	$(CXX_wasm) -o $@ build/wasm/pdftex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_PDFTEX)) $(addprefix build/wasm/, $(OBJ_DEPS_PDFTEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_PDFTEX_wasm)
+	$(CXX_wasm) -o $@ build/wasm/pdftex.o build/wasm/kpse_remote.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_PDFTEX)) $(addprefix build/wasm/, $(OBJ_DEPS_PDFTEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_PDFTEX_wasm)
 
 # Minimal XeTeX-only build (requires more deps: fontconfig, harfbuzz, icu, freetype, etc.)
 # XeTeX needs 32MB initial due to ICU data tables (~24MB static data)
 OBJ_DEPS_XETEX = $(addprefix texlive/libs/, harfbuzz/libharfbuzz.a graphite2/libgraphite2.a teckit/libTECkit.a libpng/libpng.a) fontconfig/src/.libs/libfontconfig.a $(addprefix texlive/libs/, freetype2/libfreetype.a zlib/libz.a icu/icu-build/lib/libicuuc.a icu/icu-build/lib/libicudata.a) texlive/texk/kpathsea/.libs/libkpathsea.a expat/libexpat.a texlive/texk/dvipdfm-x/busytex_xdvipdfmx.a
-OPTS_BUSYTEX_LINK_XETEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=xetex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH"]'
+OPTS_BUSYTEX_LINK_XETEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=xetex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4",  "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]' --js-library $(ROOT)/kpse_remote.js -Wl,--wrap=kpse_find_file
 
 build/wasm/xetex.js:
 	mkdir -p $(dir $@)
 	$(CC_wasm) -o build/wasm/xetex.o -c busytex.c -DBUSYTEX_XETEX -DBUSYTEX_XDVIPDFMX $(CFLAGS_OPT_wasm)
-	$(CXX_wasm) -o $@ build/wasm/xetex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
+	$(CC_wasm) -o build/wasm/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_wasm)
+# 	$(CXX_wasm) -o $@ build/wasm/xetex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
+	$(CXX_wasm) -o $@ build/wasm/xetex.o build/wasm/kpse_remote.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
 
-build/native/busytexextra: build/native/busytex                              build/texlive-extra.txt 
+build/native/busytexextra: build/native/busytex build/texlive-extra.txt 
 	$(PYTHON) packfs.py -i build/texlive-extra/ -o packfs.h --prefix=/texlive --ld=$(LD_native) --exclude '\.a|\.so|\.pod|\.ld|\.h|\.log'
 	$(CC_native) -o packfs.o -c packfs.c -DPACKFS_BUILTIN_PREFIX=/texlive -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 	$(CXX_native) -o $@ $<.o packfs.o  $(addprefix build/native/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/native/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/native/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_native) -Wl,--allow-multiple-definition -Wl,--wrap=open,--wrap=close,--wrap=read,--wrap=access,--wrap=lseek,--wrap=stat,--wrap=fstat,--wrap=fopen,--wrap=fileno @packfs.h.txt
@@ -407,6 +400,7 @@ build/%/texlive/libs/icu/icu-build/lib/libicuuc.a build/%/texlive/libs/icu/icu-b
 	cd                    build/$*/texlive/libs/icu && $(CONFIGURE_$*) $(abspath source/texlive/libs/icu/configure) $(OPTS_ICU_configure_$*)
 	$(MAKE_$*)         -C build/$*/texlive/libs/icu $(OPTS_ICU_configure_make_$*)
 	echo "all install:" > build/$*/texlive/libs/icu/icu-build/test/Makefile
+	sed -i 's/GENCCODE_ASSEMBLY_TYPE=-a gcc/GENCCODE_ASSEMBLY_TYPE=/' build/$*/texlive/libs/icu/icu-build/data/icupkg.inc
 	$(MAKE_$*)         -C build/$*/texlive/libs/icu/icu-build $(OPTS_ICU_make_$*) 
 	$(MAKE_$*)         -C build/$*/texlive/libs/icu/include/unicode
 
@@ -433,7 +427,7 @@ build/%/texlive/texk/web2c/busytex_libpdftex.a: build/%/texlive.configured
 	$(call BUSYTEXIZE_A,$(dir $@),libpdftex.a)
 
 build/%/texlive/texk/web2c/busytex_libluahbtex.a: build/%/texlive.configured build/%/texlive/libs/zziplib/libzzip.a build/%/texlive/libs/lua53/.libs/libtexlua53.a
-	$(MAKE_$*) -C $(dir $@) luatexdir/luahbtex-luatex.o mplibdir/luahbtex-lmplib.o libluahbtexspecific.a libluaharfbuzz.a libmputil.a $(OPTS_LUAHBTEX_$*)
+	$(MAKE_$*) -C $(dir $@) luatexdir/luahbtex-luatex.o mplibdir/luahbtex-lmplib.o libluahbtexspecific.a libluaharfbuzz.a libluaharfbuzzsubset.a libmputil.a $(OPTS_LUAHBTEX_$*)
 	$(MAKE_$*) -C $(dir $@) libluatex.a $(OPTS_LUAHBTEX_$*)
 	$(call BUSYTEXIZE_A,$(dir $@),libluatex.a)
 	#echo AR1; $(AR_$*) t $@; echo NM1; $(NM_$*) $@
@@ -453,7 +447,27 @@ build/texlive-basic.profile:
 	echo TEXMFSYSCONFIG $(ROOT)/$(basename $@)/texmf-dist/texmf-config >> $@ 
 	echo "collection-xetex  1"                                         >> $@ 
 	echo "collection-latex  1"                                         >> $@ 
+	echo "collection-luatex 1"                                         >> $@
+	echo "collection-fontutils 1"                                      >> $@ 
+
+build/texlive-recommended.profile:
+	mkdir -p $(dir $@) # https://tex.stackexchange.com/questions/500339/what-makes-up-each-tex-live-install-tl-scheme https://tug.org/svn/texlive/trunk/Master/tlpkg/tlpsrc/collection-basic.tlpsrc?view=markup
+	echo selected_scheme scheme-basic                                   > $@
+	echo TEXDIR $(ROOT)/$(basename $@)                                 >> $@ 
+	echo TEXMFLOCAL $(ROOT)/$(basename $@)/texmf-dist/texmf-local      >> $@
+	echo TEXMFSYSVAR $(ROOT)/$(basename $@)/texmf-dist/texmf-var       >> $@ 
+	echo TEXMFSYSCONFIG $(ROOT)/$(basename $@)/texmf-dist/texmf-config >> $@ 
+	echo "collection-xetex  1"                                         >> $@ 
+	echo "collection-latex  1"                                         >> $@ 
 	echo "collection-luatex 1"                                         >> $@ 
+	echo "collection-fontsrecommended 1"                               >> $@ 
+	echo "collection-fontutils 1"                                      >> $@
+	echo "collection-latexrecommended  1"                              >> $@ 
+# 	echo "collection-latexextra  1"                                    >> $@ 
+# 	echo "collection-langarabic 1"                                     >> $@
+# 	echo "collection-langchinese 1"                                    >> $@
+# 	echo "collection-langjapanese 1"                                   >> $@
+# 	echo "collection-langkorean 1"                                     >> $@
 
 build/texlive-extra.profile:
 	mkdir -p $(dir $@) # https://tex.stackexchange.com/questions/500339/what-makes-up-each-tex-live-install-tl-scheme https://tug.org/svn/texlive/trunk/Master/tlpkg/tlpsrc/collection-basic.tlpsrc?view=markup
@@ -465,19 +479,15 @@ build/texlive-extra.profile:
 	echo "collection-xetex  1"                                         >> $@ 
 	echo "collection-latex  1"                                         >> $@ 
 	echo "collection-luatex 1"                                         >> $@ 
+	echo "collection-fontsrecommended 1"                               >> $@ 
+	echo "collection-fontutils 1"                                      >> $@
 	echo "collection-latexrecommended  1"                              >> $@ 
-	echo "collection-latexextra  1"                                     >> $@ 
-	echo "collection-langchinese  1"                                     >> $@ 
-
-build/collection-%.profile:
-	mkdir -p $(dir $@)
-	echo selected_scheme scheme-basic                                        > $@
-	echo TEXDIR $(ROOT)/build/collection-$*                                 >> $@ 
-	echo TEXMFLOCAL $(ROOT)/build/collection-$*/texmf-dist/texmf-local      >> $@
-	echo TEXMFSYSVAR $(ROOT)/build/collection-$*/texmf-dist/texmf-var       >> $@ 
-	echo TEXMFSYSCONFIG $(ROOT)/build/collection-$*/texmf-dist/texmf-config >> $@ 
-	echo "collection-$*  1"                                                 >> $@
-
+	echo "collection-latexextra  1"                                    >> $@ 
+# 	echo "collection-langarabic 1"                                     >> $@
+# 	echo "collection-langchinese 1"                                    >> $@
+# 	echo "collection-langjapanese 1"                                   >> $@
+# 	echo "collection-langkorean 1"                                     >> $@
+	
 build/texlive-full.profile:
 	mkdir -p $(dir $@)
 	echo selected_scheme scheme-full                                    > $@
@@ -495,15 +505,27 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	$(foreach name,texlive-scripts latexconfig tex-ini-files,tar -xf source/texmfrepo/archive/$(name).r*.tar.xz -C $(basename $@); )
 	$(foreach name,xetex luahbtex pdftex xelatex luahblatex pdflatex kpsewhich kpseaccess kpsestat kpsereadlink,printf "#!/bin/sh\n$(ROOT)/$(basename $@)/$(BINARCH_native)/busytex $(name)   $$"@ > $(basename $@)/$(BINARCH_native)/$(name) ; chmod +x $(basename $@)/$(BINARCH_native)/$(name); )
 	$(foreach name,mktexlsr.pl updmap-sys.sh updmap.pl fmtutil-sys.sh fmtutil.pl,mv $(basename $@)/texmf-dist/scripts/texlive/$(name) $(basename $@)/$(BINARCH_native)/$(basename $(name)); )
-	#mkdir -p $(ROOT)/source/texmfrepotmp; export TMPDIR=$(ROOT)/source/texmfrepotmp 
 	TEXLIVE_INSTALL_NO_RESUME=1 $(PERL) source/texmfrepo/install-tl --repository source/texmfrepo --profile build/texlive-$*.profile --custom-bin $(ROOT)/$(basename $@)/$(BINARCH_native) --no-doc-install --no-src-install
+	#
+	mkdir -p $(basename $@)/tlpkg/tlpobj
+	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@)/texmf-dist --exclude='tlpkg'; )
+	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@) tlpkg; )
+	# Patch to fix legacy hyphenation
+	$(foreach name,ruhyphen ukrhyph,$(if $(wildcard source/texmfrepo/archive/$(name).r*.tar.xz),tar -xJf $(shell ls source/texmfrepo/archive/$(name).r*.tar.xz | grep -v '\.source\.' | grep -v '\.doc\.' | head -1) -C $(basename $@)/texmf-dist --exclude='tlpkg'; ))
+	ls $(basename $@)/tlpkg/tlpobj/hyphen-german.tlpobj 2>/dev/null || echo "WARNING: tlpobj missing before generate"
+	$(PERL) -I$(ROOT)/source/texmfrepo/tlpkg $(ROOT)/generate_language.pl \
+	  $(ROOT)/$(basename $@) \
+	  $(ROOT)/source/texmfrepo
+	grep -c "loader" $(basename $@)/texmf-dist/texmf-var/tex/generic/config/language.dat.lua || echo "WARNING: language.dat.lua not updated"
+	$(PYTHON) filter_language_dat.py $(basename $@)
+	mktexlsr $(basename $@)/texmf-dist
 	# 
-	##printf "#!/bin/sh\n$(ROOT)/$(basename $@)/$(BINARCH_native)/busytex lualatex   $$"@ > $(basename $@)/$(BINARCH_native)/luahbtex
-	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/fonts.conf
+	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/fonts.conf
+	mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/conf
+	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/texmf-dist/texmf-var/fonts/conf/fonts.conf
 	-mv $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/lualatex.fmt $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
-	#find packfs -type f -executable -delete -o -name '*.ld' -delete -o -name '*.a' -delete -o -name '*.so' -delete -o -name '*.h' -delete -o -name '*.pod' -delete 
 	# Never ship native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
 	rm -f $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.fmt \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.log \
@@ -513,21 +535,6 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	mkdir -p $(dir $@)
 	find $(basename $@) > $@
 	tar -czf $(basename $@).tar.gz $(basename $@)
-
-build/collection-%.txt: build/collection-%.profile source/texmfrepo.txt
-	$(BUSYTEX_native)
-	mkdir -p build/collection-$*/$(BINARCH_native)
-	cp $(BUSYTEX_native) build/collection-$*/$(BINARCH_native) 
-	$(foreach name,texlive-scripts latexconfig tex-ini-files,tar -xf source/texmfrepo/archive/$(name).r*.tar.xz -C build/collection-$*; )
-	$(foreach name,xetex luahbtex pdftex xelatex luahblatex pdflatex kpsewhich kpseaccess kpsestat kpsereadlink,printf "#!/bin/sh\n$(ROOT)/build/collection-$*/$(BINARCH_native)/busytex $(name)   $$"@ > build/collection-$*/$(BINARCH_native)/$(name) ; chmod +x build/collection-$*/$(BINARCH_native)/$(name); )
-	$(foreach name,mktexlsr.pl updmap-sys.sh updmap.pl fmtutil-sys.sh fmtutil.pl,mv build/collection-$*/texmf-dist/scripts/texlive/$(name) build/collection-$*/$(BINARCH_native)/$(basename $(name)); )
-	TEXLIVE_INSTALL_NO_RESUME=1 $(PERL) source/texmfrepo/install-tl --repository source/texmfrepo --profile build/collection-$*.profile --custom-bin $(ROOT)/build/collection-$*/$(BINARCH_native) --no-doc-install --no-src-install
-	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > build/collection-$*/fonts.conf
-	rm -rf $(addprefix build/collection-$*/texmf-dist/texmf-var/web2c/, pdftex/*.fmt pdftex/*.log xetex/*.fmt xetex/*.log luahbtex/*.fmt luahbtex/*.log luatex/*.fmt luatex/*.log) $(addprefix build/collection-$*/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
-	find build/collection-$* > $@
-	tar -czf build/collection-$*.tar.gz build/collection-$*
-
-	
 
 ################################################################################################################
 
@@ -539,32 +546,21 @@ build/wasm/texlive-%.js: build/texlive-%/texmf-dist
 	grep -r -I -h -E '\\Provides(Expl)?(Package|Class|File)' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
 	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
 
-build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt
-	mkdir -p build/wasm/
+build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat
+	mkdir -p build/wasm/ build/etc-fonts
 	echo > build/empty
 	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
-	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js.tmp --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive
+	printf '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir><cachedir>/texlive/fontconfig-cache</cachedir></fontconfig>' > build/etc-fonts/fonts.conf
+	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-$*/icudt78l.dat
+	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js.tmp --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive --preload build/etc-fonts@/etc/fonts
 	$(NODE) rebuild_fmt_wasm.js $* build/texlive-$*/texmf-dist/texmf-var/web2c
 	@echo "Rebuilding data package with new format files..."
-	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive
+	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive --preload build/etc-fonts@/etc/fonts
 	grep -r -I -h 'ProvidesPackage{' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > build/wasm/texlive-$*.js.providespackage.txt
 	cat build/wasm/texlive-$*.js.providespackage.txt build/wasm/texlive-$*.js > build/wasm/texlive-$*.js.tmp2
 	mv build/wasm/texlive-$*.js.tmp2 build/wasm/texlive-$*.js
 	rm -f build/wasm/texlive-$*.js.tmp
 	touch $@
-
-build/wasm/collection-%.js: build/collection-%.txt
-	mkdir -p $(dir $@)
-	echo > build/empty
-	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
-	$(PYTHON) $(EMROOT)/tools/file_packager.py $(basename $@).data --js-output=$@ --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/collection-$*@/texlive 
-	grep -r -I -h -E '\\Provides(Expl)?(Package|Class|File)' build/collection-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
-	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
-
-build/wasm/ubuntu/%.js: $(TEXMFFULL)
-	mkdir -p $(dir $@)
-	$(PYTHON) $(EMROOT)/tools/file_packager.py $(basename $@).data --js-output=$@ --export-name=BusytexPipeline --lz4 --use-preload-cache $(shell $(PYTHON) ubuntu_package_preload.py --package $(subst _, ,$(notdir $(basename $@))) --texmf $(TEXMFFULL) --url $(URL_ubuntu_release_cache) --skip-log $@.skip.txt --good-log $@.good.txt --providespackage-log $@.providespackage.txt --ubuntu-log $@.ubuntu.txt)
-	-cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
 
 ################################################################################################################
 
@@ -613,6 +609,8 @@ native:
 wasm:
 	$(MAKE) build/wasm/texlive.configured
 	$(MAKE) build/wasm/texlivedependencies
+	$(MAKE) -C build/native/texlive/texk/web2c tangleboot ctangle otangle tangle tie
+	$(MAKE) -C build/native/texlive/texk/web2c/web2c fixwrites makecpool splitup web2c
 	$(MAKE) build/wasm/busytexapplets
 	$(MAKE) build/wasm/busytex.js
 	$(MAKE) build/texlive-basic.txt
@@ -637,8 +635,17 @@ wasm-all: wasm wasm-pdftex wasm-xetex
 
 ################################################################################################################
 
-.PHONY: ubuntu-wasm
-ubuntu-wasm: build/wasm/ubuntu/texlive-latex-extra.js build/wasm/ubuntu/texlive-base_texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended.js
+.PHONY: wasm-postbuild-hyphenation-fmt
+wasm-postbuild-hyphenation-fmt:
+	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-basic/icudt78l.dat
+	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-recommended/icudt78l.dat
+	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-extra/icudt78l.dat
+	$(MAKE) -B build/wasm/busytex.js
+	$(foreach profile,basic recommended extra,$(foreach pkg,ruhyphen ukrhyph,archive=$$(ls source/texmfrepo/archive/$(pkg).r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.' | head -1); if [ -n "$$archive" ]; then echo "Extracting $$archive -> build/texlive-$(profile)/texmf-dist"; tar -xJf "$$archive" -C build/texlive-$(profile)/texmf-dist --exclude='tlpkg'; else echo "WARNING: no archive found for $(pkg)"; fi; ))
+	$(foreach profile,basic recommended extra,mktexlsr build/texlive-$(profile)/texmf-dist; )
+	find build/texlive-basic -name "ruhyphen.tex"
+	rm -f build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-recommended.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
+	$(MAKE) build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-recommended.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
 
 ################################################################################################################
 
@@ -654,7 +661,6 @@ build/versions.txt:
 	mkdir -p build
 	echo 'busytex dependencies:'                                        > $@
 	echo texlive: \\url{$(URL_texlive)} \\url{$(URL_texlive_full_iso)} >> $@
-	echo ubuntu packages: \\url{$(URL_ubuntu_release)}                 >> $@
 	echo expat: \\url{$(URL_expat)}                                    >> $@
 	echo fontconfig: \\url{$(URL_fontconfig)}                          >> $@
 	echo emscripten: $(EMSCRIPTEN_VERSION)                             >> $@
@@ -665,7 +671,12 @@ smoke-native: build/native/busytex
 	$(BUSYTEX_native)
 	-$(foreach applet,xelatex pdflatex luahblatex lualatex bibtex8 xdvipdfmx kpsewhich kpsestat kpseaccess kpsereadlink,echo $(BUSYTEX_native) $(applet) --version; $(BUSYTEX_native) $(applet) --version; )
 
+.PHONY: smoke-wasm
+smoke-wasm: build/wasm/busytex.js build/wasm/texlive-basic.js
+	bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js
+	
 ################################################################################################################
+
 .PHONY: clean clean-tds clean-native clean-wasm clean_build clean-dist clean-example
 clean:
 	rm -rf build source
@@ -681,24 +692,24 @@ clean-dist:
 	rm -rf dist-*
 clean-example:
 	rm -rf example/*.aux example/*.bbl example/*.blg example/*.log example/*.xdv
+
 ################################################################################################################
-.PHONY: collections-wasm
-collections-wasm: $(foreach collection,$(COLLECTIONS),build/wasm/collection-$(collection).js)
 
 .PHONY: dist-wasm dist-native dist-native-full download-native
 dist-wasm:
 	mkdir -p $@
-	-cp build/wasm/busytex.js       build/wasm/busytex.wasm       $@ 
-	-cp build/wasm/texlive-basic.js build/wasm/texlive-basic.data $@ 
+	-cp build/wasm/busytex.js       build/wasm/busytex.wasm       $@
+	-cp build/wasm/texlive-basic.js build/wasm/texlive-basic.data $@
+	-cp build/wasm/texlive-recommended.js build/wasm/texlive-recommended.data $@
 	-cp build/wasm/texlive-extra.js build/wasm/texlive-extra.data $@
-	-cp build/wasm/texlive-basic.js.providespackage.txt build/wasm/texlive-extra.js.providespackage.txt $@
-	-cp build/wasm/ubuntu/*.js      build/wasm/ubuntu/*.data      $@ 
-	-cp build/wasm/collection-*.js  build/wasm/collection-*.data  $@
-	-cp build/wasm/collection-*.js.providespackage.txt            $@ 
+	-cp build/wasm/texlive-basic.js.providespackage.txt \
+	    build/wasm/texlive-recommended.js.providespackage.txt \
+	    build/wasm/texlive-extra.js.providespackage.txt $@
+	-cp web/busytex_pipeline.js web/busytex_worker.js $@
 
 dist-native-full: build/native/busytex
 	mkdir -p $@
-	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig></fontconfig>' > $@/fonts.conf # <dir prefix="relative">texlive/texmf-dist/fonts/opentype</dir><dir prefix="relative">texlive/texmf-dist/fonts/type1</dir><cachedir prefix="relative">cache</cachedir>
+	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir prefix="relative">texlive/texmf-dist/fonts/opentype</dir><dir prefix="relative">texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $@/fonts.conf # <dir prefix="relative">texlive/texmf-dist/fonts/opentype</dir><dir prefix="relative">texlive/texmf-dist/fonts/type1</dir><cachedir prefix="relative">cache</cachedir>
 	cp $< $@
 	ln -s $(ROOT)/build/texlive-full $@/texlive
 
@@ -717,4 +728,23 @@ download-native:
 	#-$(CC_native) source/texlive/libs/freetype2/freetype-src/src/tools/apinames.c -o build/native/texlive/libs/freetype2/ft-build/apinames
 	chmod +x $(addprefix build/native/texlive/texk/web2c/, $(BUSYTEX_TEXBIN)) $(addprefix build/native/texlive/texk/web2c/web2c/, $(BUSYTEX_WEB2CBIN))
 
-
+download-native-auth:
+	mkdir -p source build/native build/native/texlive/texk/web2c/web2c \
+	         build/native/texlive/libs/icu/icu-build/bin \
+	         build/native/texlive/libs/freetype2/ft-build
+	gh release download $(notdir $(URLRELEASE)) \
+	  --repo $(GITHUB_REPOSITORY) \
+	  $(foreach bin,busytex busytex.tar $(BUSYTEX_TEXBIN) $(BUSYTEX_WEB2CBIN),--pattern "$(bin)") \
+	  --dir build/native
+	mv $(addprefix build/native/,$(BUSYTEX_TEXBIN)) build/native/texlive/texk/web2c/
+	mv $(addprefix build/native/,$(BUSYTEX_WEB2CBIN)) build/native/texlive/texk/web2c/web2c/
+	chown $(shell whoami) $(BUSYTEX_native) || true
+	chmod +x $(BUSYTEX_native)
+	chmod +x $(addprefix build/native/texlive/texk/web2c/,$(BUSYTEX_TEXBIN))
+	chmod +x $(addprefix build/native/texlive/texk/web2c/web2c/,$(BUSYTEX_WEB2CBIN))
+	file $(BUSYTEX_native)
+	$(BUSYTEX_native)
+	-rm build/native/texlive/libs/icu/icu-build/bin/icupkg \
+	    build/native/texlive/libs/icu/icu-build/bin/pkgdata
+	-ln -s $(shell which icupkg)  build/native/texlive/libs/icu/icu-build/bin/
+	-ln -s $(shell which pkgdata) build/native/texlive/libs/icu/icu-build/bin/
