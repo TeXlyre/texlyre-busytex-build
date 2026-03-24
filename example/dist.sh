@@ -39,7 +39,7 @@ echo "collection-luatex 1"                          >> $DIST/$DIST.profile
 
 TEXLIVE_INSTALL_NO_RESUME=1 perl $DIST/installer/install-tl --repository source/texmfrepo --profile $DIST/$DIST.profile --custom-bin $TEXDIR/$BINARCH_native --no-doc-install --no-src-install --no-interaction
 
-echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $DIST/fonts.conf
+echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir prefix="relative">texmf-dist/fonts/opentype</dir><dir prefix="relative">texmf-dist/fonts/type1</dir></fontconfig>' > $DIST/fonts.conf
 
 find $DIST -name '*.fmt'
 cp $DIST/texmf-dist/texmf-var/web2c/luahbtex/lualatex.fmt $DIST/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt
