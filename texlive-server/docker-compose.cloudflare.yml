@@ -1,0 +1,39 @@
+version: '3.3'
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - 127.0.0.1:${REDIS_PORT:-6379}:6379
+    networks:
+      - texlive-network
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  texlive-server:
+    restart: always
+    build: .
+    container_name: texlive-server
+    ports:
+      - ${PORT:-8070}:${PORT:-8070}
+    environment:
+      - PORT=${PORT:-8070}
+      - REDIS_URL=redis://redis:6379
+      - API_ORIGINS=${API_ORIGINS:-}
+      - HOST_DOMAIN=${HOST_DOMAIN:-}
+      - TEXMF_ROOT=${TEXMF_ROOT:-/texmf}
+    volumes:
+      - ${TEXMF_ROOT:-./texmf}:/texmf:ro
+    networks:
+      - texlive-network
+    depends_on:
+      - redis
+    env_file:
+      - .env
+
+networks:
+  texlive-network:
+    driver: bridge
+
+volumes:
+  redis_data:

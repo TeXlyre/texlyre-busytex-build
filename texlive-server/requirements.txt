@@ -1,0 +1,4 @@
+flask==2.3.3
+flask-cors==4.0.1
+gevent==23.9.1
+redis==4.6.0
