@@ -142,9 +142,9 @@ CFLAGS_FONTCONFIG_wasm= -Duuid_generate_random=uuid_generate -pthread
 # -pthread
 CFLAGS_BIBTEX_wasm      = $(CFLAGS_BIBTEX) -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sALLOW_MEMORY_GROWTH=1
 CFLAGS_ICU_wasm         = $(CFLAGS_OPT_wasm) -sERROR_ON_UNDEFINED_SYMBOLS=0
-CFLAGS_TEXLIVE_wasm     = -I$(abspath build/wasm/texlive/libs/icu/include)   -I$(abspath source/fontconfig) $(CFLAGS_OPT_wasm) -sERROR_ON_UNDEFINED_SYMBOLS=0 -Wno-error=unused-but-set-variable
+CFLAGS_TEXLIVE_wasm     = -I$(abspath build/wasm/texlive/libs/icu/include)   -I$(abspath source/fontconfig) -I$(abspath build/wasm/fontconfig) $(CFLAGS_OPT_wasm) -sERROR_ON_UNDEFINED_SYMBOLS=0 -Wno-error=unused-but-set-variable
 CXXFLAGS_TEXLIVE_wasm   = $(CFLAGS_TEXLIVE_wasm)
-CFLAGS_TEXLIVE_native   = -I$(abspath build/native/texlive/libs/icu/include) -I$(abspath source/fontconfig) $(CFLAGS_OPT_native)
+CFLAGS_TEXLIVE_native   = -I$(abspath build/native/texlive/libs/icu/include) -I$(abspath source/fontconfig) -I$(abspath build/native/fontconfig) $(CFLAGS_OPT_native)
 CXXFLAGS_TEXLIVE_native = $(CFLAGS_TEXLIVE_native) $(CXXFLAGS_native)
 # https://tug.org/pipermail/tlbuild/2021q1/004774.html
 # https://github.com/emscripten-core/emscripten/issues/14973
