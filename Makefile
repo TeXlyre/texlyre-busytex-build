@@ -5,7 +5,7 @@
 # TL2026 URLs
 URL_texlive_full_iso = https://mirror.ctan.org/systems/texlive/Images/texlive2026.iso
 URL_texlive_full_iso_cache = https://mirror.ctan.org/systems/texlive/Images/texlive2026.iso
-URL_texlive          = https://github.com/TeX-Live/texlive-source/archive/refs/heads/tags/texlive-2026.0.tar.gz
+URL_texlive          = https://github.com/TeX-Live/texlive-source/archive/tags/texlive-2026.0.tar.gz
 # Old TL2023 URLs (commented out)
 #URL_texlive_full_iso = https://tug.ctan.org/systems/texlive/Images/texlive2023-20230313.iso
 #URL_texlive_full_iso_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/texlive2023-20230313.iso.00 ...
