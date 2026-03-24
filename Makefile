@@ -220,7 +220,7 @@ BUSYTEXIZE_A = find $(1) -name $(2) -exec sh -c 'mv {} `dirname {}`/$(notdir $@)
 
 source/texlive.txt source/expat.txt source/fontconfig.txt:
 	mkdir -p $(basename $@)
-	curl -L $(URL_$(notdir $(basename $@))) | tar -xJf - -C $(basename $@) --strip-components=1
+	curl -L $(URL_$(notdir $(basename $@))) | tar -xf - -C $(basename $@) --strip-components=1
 	find $(basename $@) > $@
 
 # source/texmfrepo.txt:

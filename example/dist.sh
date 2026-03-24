@@ -12,7 +12,7 @@ TEXLIVE_RELEASE_BASE=https://mirror.ctan.org/systems/texlive/tlnet
 mkdir -p $DIST/$BINARCH_native && curl -o $DIST/$BINARCH_native/$BUSYTEX_native -L https://github.com/busytex/busytex/releases/download/build_native_9b40c3ce65d39b52bc38eb4794b8f9837b956064_12299351715_1/busytex && chmod +x $DIST/$BINARCH_native/$BUSYTEX_native && ln -s $TEXDIR/$BINARCH_native/$BUSYTEX_native $BUSYTEX_native
 
 # Download install-tl directly from CTAN for 2026
-mkdir -p $DIST/installer && curl -L https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz | tar -xzf - --strip-components=1 -C $DIST/installer
+mkdir -p $DIST/installer && curl -L https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz | tar -xf - --strip-components=1 -C $DIST/installer
 
 # Extract required packages from the repository that was already downloaded
 # These should be in source/texmfrepo/archive/ from the earlier make steps
