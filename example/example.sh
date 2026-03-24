@@ -12,6 +12,7 @@ if [[ "$1" == "busytex" ]]; then
     export  TEXMFCNF=$DIST/texlive-dist/texmf-dist/web2c
     export  TEXMFVAR=$DIST/texlive-dist/texmf-dist/texmf-var
     export FONTCONFIG_PATH=$DIST/texlive-dist
+    echo "<?xml version=\"1.0\"?><!DOCTYPE fontconfig SYSTEM \"fonts.dtd\"><fontconfig><dir>$DIST/texlive-dist/texmf-dist/fonts/opentype</dir><dir>$DIST/texlive-dist/texmf-dist/fonts/type1</dir></fontconfig>" > $DIST/texlive-dist/fonts.conf
 fi
 
 if [ -d example ]; then
