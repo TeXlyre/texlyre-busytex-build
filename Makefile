@@ -2,15 +2,15 @@
 # http://www.linuxfromscratch.org/blfs/view/svn/pst/texlive.html
 # https://www.tug.org/texlive//devsrc/Master/texmf-dist/tex/latex/
 
-# TL2025 URLs
-URL_texlive_full_iso = https://mirror.ctan.org/systems/texlive/Images/texlive2025.iso
-URL_texlive_full_iso_cache = https://mirror.ctan.org/systems/texlive/Images/texlive2025.iso
-URL_texlive          = https://github.com/TeX-Live/texlive-source/archive/refs/heads/tags/texlive-2025.0.tar.gz
+# TL2026 URLs
+URL_texlive_full_iso = https://mirror.ctan.org/systems/texlive/Images/texlive2026.iso
+URL_texlive_full_iso_cache = https://mirror.ctan.org/systems/texlive/Images/texlive2026.iso
+URL_texlive          = https://github.com/TeX-Live/texlive-source/archive/refs/heads/tags/texlive-2026.0.tar.gz
 # Old TL2023 URLs (commented out)
 #URL_texlive_full_iso = https://tug.ctan.org/systems/texlive/Images/texlive2023-20230313.iso
 #URL_texlive_full_iso_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/texlive2023-20230313.iso.00 ...
-URL_expat            = https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz
-URL_fontconfig       = https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.13.96.tar.gz
+URL_expat            = https://github.com/libexpat/libexpat/releases/download/R_2_7_5/expat-2.7.5.tar.gz
+URL_fontconfig       = https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.16.0.tar.xz
 URL_ubuntu_release   = https://packages.ubuntu.com/noble/
 URL_ubuntu_release_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/
 
@@ -229,11 +229,11 @@ source/texlive.txt source/expat.txt source/fontconfig.txt:
 # 	find $(basename $@) > $@
 source/texmfrepo.txt:
 	mkdir -p $(basename $@)
-	@if [ ! -f source/texlive2025.iso ]; then \
-		echo "Downloading TeX Live 2025 ISO (6+ GB)..."; \
-		curl -L -o source/texlive2025.iso $(URL_texlive_full_iso) || wget -O source/texlive2025.iso $(URL_texlive_full_iso); \
+	@if [ ! -f source/texlive2026.iso ]; then \
+		echo "Downloading TeX Live 2026 ISO (6+ GB)..."; \
+		curl -L -o source/texlive2026.iso $(URL_texlive_full_iso) || wget -O source/texlive2026.iso $(URL_texlive_full_iso); \
 	fi
-	bsdtar -xf source/texlive2025.iso -C $(basename $@)
+	bsdtar -xf source/texlive2026.iso -C $(basename $@)
 	find $(basename $@) > $@
 
 source/texlive.patched: source/texlive.txt
