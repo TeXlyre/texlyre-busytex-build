@@ -227,7 +227,7 @@ source/fontconfig.txt:
 	mkdir -p $(basename $@)
 	curl -L $(URL_fontconfig) | tar -xJf - -C $(basename $@) --strip-components=1
 	find $(basename $@) > $@
-	
+
 # source/texmfrepo.txt:
 # 	mkdir -p $(basename $@)
 # 	curl -L $(URL_texlive_full_iso_cache) | bsdtar -x -C $(basename $@)
@@ -472,7 +472,7 @@ build/texlive-extra.profile:
 	echo "collection-luatex 1"                                         >> $@ 
 	echo "collection-latexrecommended  1"                              >> $@ 
 	echo "collection-latexextra  1"                                     >> $@ 
-	echo "collection-langchinese  1"                                     >> $@ 
+# 	echo "collection-langchinese  1"                                     >> $@ 
 
 build/collection-%.profile:
 	mkdir -p $(dir $@)
@@ -528,10 +528,15 @@ build/collection-%.txt: build/collection-%.profile source/texmfrepo.txt
 	$(foreach name,mktexlsr.pl updmap-sys.sh updmap.pl fmtutil-sys.sh fmtutil.pl,mv build/collection-$*/texmf-dist/scripts/texlive/$(name) build/collection-$*/$(BINARCH_native)/$(basename $(name)); )
 	TEXLIVE_INSTALL_NO_RESUME=1 $(PERL) source/texmfrepo/install-tl --repository source/texmfrepo --profile build/collection-$*.profile --custom-bin $(ROOT)/build/collection-$*/$(BINARCH_native) --no-doc-install --no-src-install
 	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > build/collection-$*/fonts.conf
-	rm -rf $(addprefix build/collection-$*/texmf-dist/texmf-var/web2c/, pdftex/*.fmt pdftex/*.log xetex/*.fmt xetex/*.log luahbtex/*.fmt luahbtex/*.log luatex/*.fmt luatex/*.log) $(addprefix build/collection-$*/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
+	-mv build/collection-$*/texmf-dist/texmf-var/web2c/luahbtex/lualatex.fmt build/collection-$*/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt
+	rm -rf $(addprefix build/collection-$*/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix build/collection-$*/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
+	rm -f build/collection-$*/texmf-dist/texmf-var/web2c/luahbtex/*.fmt \
+	      build/collection-$*/texmf-dist/texmf-var/web2c/luahbtex/*.log \
+	      build/collection-$*/texmf-dist/texmf-var/web2c/luatex/*.fmt \
+	      build/collection-$*/texmf-dist/texmf-var/web2c/luatex/*.log
+	rm -f build/collection-$*/texmf-dist/ls-R
 	find build/collection-$* > $@
 	tar -czf build/collection-$*.tar.gz build/collection-$*
-
 	
 
 ################################################################################################################
@@ -560,6 +565,7 @@ build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt
 
 build/wasm/collection-%.js: build/collection-%.txt
 	mkdir -p $(dir $@)
+	rm -f build/collection-$*/texmf-dist/ls-R
 	echo > build/empty
 	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
 	$(PYTHON) $(EMROOT)/tools/file_packager.py $(basename $@).data --js-output=$@ --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/collection-$*@/texlive 
