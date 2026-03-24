@@ -225,7 +225,7 @@ source/texlive.txt source/expat.txt:
 
 source/fontconfig.txt:
 	mkdir -p $(basename $@)
-	curl -L $(URL_fontconfig) | tar -xJf - -C $(basename $@) --strip-components=1
+	curl -L $(URL_fontconfig) | xz -d | tar -xf - -C $(basename $@) --strip-components=1
 	find $(basename $@) > $@
 
 # source/texmfrepo.txt:
