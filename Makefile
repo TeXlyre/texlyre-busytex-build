@@ -10,7 +10,7 @@ URL_texlive          = https://github.com/TeX-Live/texlive-source/archive/tags/t
 #URL_texlive_full_iso = https://tug.ctan.org/systems/texlive/Images/texlive2023-20230313.iso
 #URL_texlive_full_iso_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/texlive2023-20230313.iso.00 ...
 URL_expat            = https://github.com/libexpat/libexpat/releases/download/R_2_7_5/expat-2.7.5.tar.gz
-URL_fontconfig       = https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.16.0.tar.xz
+URL_fontconfig       = https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.15.0.tar.gz
 URL_ubuntu_release   = https://packages.ubuntu.com/noble/
 URL_ubuntu_release_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/
 
@@ -220,7 +220,7 @@ BUSYTEXIZE_A = find $(1) -name $(2) -exec sh -c 'mv {} `dirname {}`/$(notdir $@)
 
 source/texlive.txt source/expat.txt source/fontconfig.txt:
 	mkdir -p $(basename $@)
-	curl -L $(URL_$(notdir $(basename $@))) | tar -xf - -C $(basename $@) --strip-components=1
+	curl -L $(URL_$(notdir $(basename $@))) | tar -xzf - -C $(basename $@) --strip-components=1
 	find $(basename $@) > $@
 
 # source/texmfrepo.txt:
