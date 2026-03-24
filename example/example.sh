@@ -14,7 +14,7 @@ if [[ "$1" == "busytex" ]]; then
     echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>'$(realpath $DIST/texlive-dist/texmf-dist/fonts/opentype)'</dir><dir>'$(realpath $DIST/texlive-dist/texmf-dist/fonts/type1)'</dir></fontconfig>' > $DIST/texlive-dist/fonts.conf
     mkdir -p /etc/fonts
     cp $DIST/texlive-dist/fonts.conf /etc/fonts/fonts.conf
-    fc-cache -f -v 2>&1 || echo "fc-cache failed"
+    rm -rf /var/cache/fontconfig/*
     cat /etc/fonts/fonts.conf
 fi
 
