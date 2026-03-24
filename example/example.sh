@@ -11,14 +11,11 @@ if [[ "$1" == "busytex" ]]; then
     export  TEXMFCNF=$DIST/texlive-dist/texmf-dist/web2c
     export  TEXMFVAR=$DIST/texlive-dist/texmf-dist/texmf-var
     export FONTCONFIG_PATH=$DIST/texlive-dist
-    mkdir -p $DIST/texlive-dist/fc-cache
-    echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir prefix="relative">texmf-dist/fonts/opentype</dir><dir prefix="relative">texmf-dist/fonts/type1</dir><cachedir prefix="relative">fc-cache</cachedir></fontconfig>' > $DIST/texlive-dist/fonts.conf
-    FONTCONFIG_FILE=$DIST/texlive-dist/fonts.conf fc-cache -f -v 2>&1 || echo "fc-cache failed"
-    echo "Cache contents:"; ls -la $DIST/texlive-dist/fc-cache/ 2>/dev/null || echo "(empty)"
-
-    echo "FONTCONFIG_PATH=$FONTCONFIG_PATH"
-    echo "fonts.conf contents:"; cat $DIST/texlive-dist/fonts.conf
-    echo "Resolved FONTCONFIG_PATH:"; realpath $FONTCONFIG_PATH 2>/dev/null || readlink -f $FONTCONFIG_PATH
+    echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>'$(realpath $DIST/texlive-dist/texmf-dist/fonts/opentype)'</dir><dir>'$(realpath $DIST/texlive-dist/texmf-dist/fonts/type1)'</dir></fontconfig>' > $DIST/texlive-dist/fonts.conf
+    mkdir -p /etc/fonts
+    cp $DIST/texlive-dist/fonts.conf /etc/fonts/fonts.conf
+    fc-cache -f -v 2>&1 || echo "fc-cache failed"
+    cat /etc/fonts/fonts.conf
 fi
 
 if [ -d example ]; then
