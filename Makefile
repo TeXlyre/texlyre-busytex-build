@@ -10,7 +10,7 @@ URL_texlive          = https://github.com/TeX-Live/texlive-source/archive/tags/t
 #URL_texlive_full_iso = https://tug.ctan.org/systems/texlive/Images/texlive2023-20230313.iso
 #URL_texlive_full_iso_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/texlive2023-20230313.iso.00 ...
 URL_expat            = https://github.com/libexpat/libexpat/releases/download/R_2_7_5/expat-2.7.5.tar.gz
-URL_fontconfig       = https://gitlab.freedesktop.org/api/v4/projects/890/packages/generic/fontconfig/2.17.1/fontconfig-2.17.1.tar.xz
+URL_fontconfig       = https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.13.96.tar.gz
 URL_ubuntu_release   = https://packages.ubuntu.com/noble/
 URL_ubuntu_release_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/
 
@@ -218,14 +218,9 @@ OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore
 BUSYTEXIZE_O = find $(1) -name $(2) -exec sh -c 'cp {} `dirname {}`/$(notdir $@)' ';'
 BUSYTEXIZE_A = find $(1) -name $(2) -exec sh -c 'mv {} `dirname {}`/$(notdir $@)' ';'
 
-source/texlive.txt source/expat.txt:
+source/texlive.txt source/expat.txt source/fontconfig.txt:
 	mkdir -p $(basename $@)
 	curl -L $(URL_$(notdir $(basename $@))) | tar -xzf - -C $(basename $@) --strip-components=1
-	find $(basename $@) > $@
-
-source/fontconfig.txt:
-	mkdir -p $(basename $@)
-	curl -L $(URL_fontconfig) | xz -d | tar -xf - -C $(basename $@) --strip-components=1
 	find $(basename $@) > $@
 
 # source/texmfrepo.txt:
