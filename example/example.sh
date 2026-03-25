@@ -11,10 +11,19 @@ if [[ "$1" == "busytex" ]]; then
     export  TEXMFCNF=$DIST/texlive-dist/texmf-dist/web2c
     export  TEXMFVAR=$DIST/texlive-dist/texmf-dist/texmf-var
     export FONTCONFIG_PATH=$DIST/texlive-dist
-    echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>'$(realpath $DIST/texlive-dist/texmf-dist/fonts/opentype)'</dir><dir>'$(realpath $DIST/texlive-dist/texmf-dist/fonts/type1)'</dir></fontconfig>' > $DIST/texlive-dist/fonts.conf
+    FONTS_OT=$(realpath $DIST/texlive-dist/texmf-dist/fonts/opentype)
+    FONTS_T1=$(realpath $DIST/texlive-dist/texmf-dist/fonts/type1)
+    cat > $DIST/texlive-dist/fonts.conf <<EOF
+<?xml version="1.0"?>
+<fontconfig>
+  <dir>$FONTS_OT</dir>
+  <dir>$FONTS_T1</dir>
+</fontconfig>
+EOF
     mkdir -p /etc/fonts
     cp $DIST/texlive-dist/fonts.conf /etc/fonts/fonts.conf
-    rm -rf /var/cache/fontconfig/*
+    rm -rf /var/cache/fontconfig
+    mkdir -p /var/cache/fontconfig
     cat /etc/fonts/fonts.conf
 fi
 
