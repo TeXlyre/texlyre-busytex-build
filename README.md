@@ -1,4 +1,4 @@
-# Programs from TexLive 2025 compiled with Emscripten into a single fully static binary (x86_64-linux / WASM)
+# Programs from TexLive 2026 compiled with Emscripten into a single fully static binary (x86_64-linux / WASM)
 
 Based on [busytex](https://github.com/busytex/busytex)
 
@@ -43,8 +43,8 @@ sh example/example.sh
 ```
 
 ```shell
-wget http://mirrors.ctan.org/systems/texlive/Images/texlive2025.iso
-split -b2G -d texlive2025.iso texlive2025.iso.
+wget http://mirrors.ctan.org/systems/texlive/Images/texlive2026.iso
+split -b2G -d texlive2026.iso texlive2026.iso.
 ```
 
 ### Help needed
@@ -158,7 +158,7 @@ Finally, copy the newly generated files from `dist-wasm` to your assets director
 
 ### Run example
 
-To test the different texlive-basic versions of `pdftex`, `xetex`, and `luahbtex` (`texlive 2025`):
+To test the different texlive-basic versions of `pdftex`, `xetex`, and `luahbtex` (`texlive 2026`):
 
 ```shell
 python3 example/example.py --port 8183
@@ -169,7 +169,7 @@ Then navigate to `http://localhost:8183/example/example.html`
 to use a newly built (from source) wasm, copy the contents of `./dist-wasm` to `./dist`
 
 ### References
-- [busytex texlive 2025 update](https://github.com/SiglumProject/busytex)
+- [busytex texlive 2026 update](https://github.com/SiglumProject/busytex)
 - [pdftex.js](https://github.com/dmonad/pdftex.js)
 - [xetex.js](https://github.com/lyze/xetex-js)
 - [texlive.js](https://github.com/manuels/texlive.js/)

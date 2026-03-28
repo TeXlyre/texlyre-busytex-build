@@ -182,9 +182,16 @@ class BusytexPipeline {
     load_package(data_package_js) {
         if (data_package_js in this.data_package_promises)
             return this.data_package_promises[data_package_js];
-
         BusytexPipeline.calledRun = false;
         BusytexPipeline.data_packages.push(data_package_js);
+        if (!BusytexPipeline.FS_createPath) {
+            const noop = () => { };
+            BusytexPipeline.FS_createPath = noop;
+            BusytexPipeline.FS_createDataFile = noop;
+            BusytexPipeline.FS_createPreloadedFile = noop;
+            BusytexPipeline.FS_createLazyFile = noop;
+            BusytexPipeline.FS_unlink = noop;
+        }
         const promise = this.script_loader(data_package_js);
         this.data_package_promises[data_package_js] = promise;
         return promise;
@@ -263,7 +270,10 @@ class BusytexPipeline {
 
         this.bibtex_resolver = new BusytexBibtexResolver();
         this.data_package_resolver = new BusytexDataPackageResolver(data_packages_js, BusytexPipeline.texmf_system, texmf_local);
-        this.wasm_module_promise = fetch(busytex_wasm).then(WebAssembly.compileStreaming);
+        this.wasm_module_promise = fetch(busytex_wasm).then(response => {
+            if (!response.ok) throw new Error(`Failed to fetch WASM module: ${busytex_wasm} (HTTP ${response.status})`);
+            return WebAssembly.compileStreaming ? WebAssembly.compileStreaming(response) : response.arrayBuffer().then(WebAssembly.compile);
+        });
         this.mem_header_size = 2 ** 26;
 
         this.em_module_promise = this.script_loader(busytex_js);
@@ -308,13 +318,19 @@ class BusytexPipeline {
         const { print, init_env } = this;
 
         const pre_run_packages = Module => () => {
+            Module['FS_createPath'] = Module.FS.createPath;
+            Module['FS_createDataFile'] = Module.FS.createDataFile;
+            Module['FS_createPreloadedFile'] = Module.FS.createPreloadedFile;
+            Module['FS_createLazyFile'] = Module.FS.createLazyFile;
+            Module['FS_unlink'] = Module.FS.unlink;
+
             Object.setPrototypeOf(BusytexPipeline, Module);
 
             for (const preRun of BusytexPipeline.preRun) {
                 if (Module.preRuns.includes(preRun))
                     continue;
 
-                preRun();
+                preRun(Module);
                 Module.preRuns.push(preRun);
             }
         }
@@ -378,7 +394,13 @@ class BusytexPipeline {
             }
         };
 
-        const initialized_module = await busytex(Module);
+        const moduleFactory = typeof busytex !== 'undefined' ? busytex
+            : typeof pdftex !== 'undefined' ? pdftex
+                : typeof xetex !== 'undefined' ? xetex
+                    : typeof luahbtex !== 'undefined' ? luahbtex
+                        : null;
+        if (!moduleFactory) throw new Error('No BusyTeX module factory found. Ensure busytex.js or a per-engine .js file is loaded.');
+        const initialized_module = await moduleFactory(Module);
 
         if (!(this.mem_header_size % 4 == 0 && initialized_module.HEAP32.slice(this.mem_header_size / 4).every(x => x == 0)))
             throw new Error(`Memory header size [${this.mem_header_size}] must be divisible by 4, and remaining memory must be zero`);
@@ -442,15 +464,15 @@ class BusytexPipeline {
 
         const [xdv_path, pdf_path, log_path, aux_path, blg_path, bbl_path] = ['.xdv', '.pdf', '.log', '.aux', '.blg', '.bbl'].map(ext => tex_path.replace('.tex', ext));
 
-        const xetex = ['xelatex', '--no-shell-escape', '--interaction=batchmode', '--halt-on-error', '--no-pdf', '--fmt', this.fmt.xetex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).xetex);
-        const pdftex = ['pdflatex', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.pdftex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).pdftex);
-        const pdftex_not_final = ['pdflatex', '--no-shell-escape', '--interaction=batchmode', '--halt-on-error', '--fmt', this.fmt.pdftex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).pdftex);
+        const xetex = ['xelatex', '-synctex=1', '--no-shell-escape', '--interaction=batchmode', '--halt-on-error', '--no-pdf', '--fmt', this.fmt.xetex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).xetex);
+        const pdftex = ['pdflatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.pdftex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).pdftex);
+        const pdftex_not_final = ['pdflatex', '-synctex=1', '--no-shell-escape', '--interaction=batchmode', '--halt-on-error', '--fmt', this.fmt.pdftex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).pdftex);
 
-        const luahbtex = ['luahblatex', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luahbtex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
-        const luahbtex_not_final = ['luahblatex', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--no-pdf', '--fmt', this.fmt.luahbtex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
+        const luahbtex = ['luahblatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luahbtex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
+        const luahbtex_not_final = ['luahblatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--no-pdf', '--fmt', this.fmt.luahbtex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
 
-        const luatex = ['lualatex', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
-        const luatex_not_final = ['lualatex', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--no-pdf', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
+        const luatex = ['lualatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
+        const luatex_not_final = ['lualatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--no-pdf', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
 
         const bibtex8 = ['bibtex8', '--8bit'].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).bibtex8).concat([aux_path]);
 
