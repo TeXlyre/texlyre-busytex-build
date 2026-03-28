@@ -9,8 +9,9 @@ export TEXMFLOG=$PWD/texmf.log
 if [[ "$1" == "busytex" || "$1" == "busytexextra" ]]; then
     export DIST=$(dirname $BUSYTEX)
     export TEXMFDIST=$DIST/texlive-dist/texmf-dist
-    export  TEXMFCNF=$DIST/texlive-dist/texmf-dist/web2c
-    export  TEXMFVAR=$DIST/texlive-dist/texmf-dist/texmf-var
+    export TEXMFCNF=$DIST/texlive-dist/texmf-dist/web2c
+    export TEXMFVAR=$DIST/texlive-dist/texmf-dist/texmf-var
+    export TEXMFSYSVAR=$DIST/texlive-dist/texmf-dist/texmf-var
     export FONTCONFIG_PATH=$DIST/texlive-dist
 fi
 
