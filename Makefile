@@ -209,7 +209,7 @@ OPTS_BUSYTEX_COMPILE_wasm   = -DBUSYTEX_MAKEINDEX -DBUSYTEX_KPSE -DBUSYTEX_BIBTE
 OPTS_BUSYTEX_LINK = --static -static    -static-libstdc++ -static-libgcc
 
 OPTS_BUSYTEX_LINK_native =  $(OPTS_BUSYTEX_LINK)    -ldl -lm -pthread -lpthread -Wl,--unresolved-symbols=ignore-all
-OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
+OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
 
 ##############################################################################################################################
 
@@ -381,7 +381,7 @@ build/%/busytex build/%/busytex.js:
 
 # Minimal pdfTeX-only build
 OBJ_DEPS_PDFTEX = $(addprefix texlive/libs/, libpng/libpng.a pplib/libpplib.a zlib/libz.a zziplib/libzzip.a xpdf/libxpdf.a) texlive/texk/kpathsea/.libs/libkpathsea.a
-OPTS_BUSYTEX_LINK_PDFTEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=16777216 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=pdftex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
+OPTS_BUSYTEX_LINK_PDFTEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=16777216 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=pdftex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
 
 build/wasm/pdftex.js:
 	mkdir -p $(dir $@)
@@ -391,7 +391,7 @@ build/wasm/pdftex.js:
 # Minimal XeTeX-only build (requires more deps: fontconfig, harfbuzz, icu, freetype, etc.)
 # XeTeX needs 32MB initial due to ICU data tables (~24MB static data)
 OBJ_DEPS_XETEX = $(addprefix texlive/libs/, harfbuzz/libharfbuzz.a graphite2/libgraphite2.a teckit/libTECkit.a libpng/libpng.a) fontconfig/src/.libs/libfontconfig.a $(addprefix texlive/libs/, freetype2/libfreetype.a zlib/libz.a icu/icu-build/lib/libicuuc.a icu/icu-build/lib/libicudata.a) texlive/texk/kpathsea/.libs/libkpathsea.a expat/libexpat.a texlive/texk/dvipdfm-x/busytex_xdvipdfmx.a
-OPTS_BUSYTEX_LINK_XETEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,-error-limit=0 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=xetex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4",  "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
+OPTS_BUSYTEX_LINK_XETEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=xetex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4",  "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
 
 build/wasm/xetex.js:
 	mkdir -p $(dir $@)
