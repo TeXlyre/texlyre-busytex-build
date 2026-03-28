@@ -6,7 +6,7 @@ export ENGINES="${@:-pdflatex xelatex luahbtex}"
 export TEXMFLOG=$PWD/texmf.log
 # export TEXINPUTS=.:./example/
 
-if [[ "$1" == "busytex" ]]; then
+if [[ "$1" == "busytex" || "$1" == "busytexextra" ]]; then
     export DIST=$(dirname $BUSYTEX)
     export TEXMFDIST=$DIST/texlive-dist/texmf-dist
     export  TEXMFCNF=$DIST/texlive-dist/texmf-dist/web2c
