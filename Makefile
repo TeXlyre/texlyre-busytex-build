@@ -466,9 +466,10 @@ build/texlive-extra.profile:
 	echo "collection-xetex  1"                                         >> $@ 
 	echo "collection-latex  1"                                         >> $@ 
 	echo "collection-luatex 1"                                         >> $@ 
+	echo "collection-fontsrecommended 1"                               >> $@ 
 	echo "collection-latexrecommended  1"                              >> $@ 
-	echo "collection-latexextra  1"                                     >> $@ 
-	echo "collection-langchinese  1"                                     >> $@ 
+	echo "collection-latexextra  1"                                    >> $@ 
+	echo "collection-langchinese  1"                                   >> $@
 
 build/collection-%.profile:
 	mkdir -p $(dir $@)
