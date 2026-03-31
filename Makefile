@@ -209,7 +209,7 @@ OPTS_BUSYTEX_COMPILE_wasm   = -DBUSYTEX_MAKEINDEX -DBUSYTEX_KPSE -DBUSYTEX_BIBTE
 OPTS_BUSYTEX_LINK = --static -static    -static-libstdc++ -static-libgcc
 
 OPTS_BUSYTEX_LINK_native =  $(OPTS_BUSYTEX_LINK)    -ldl -lm -pthread -lpthread -Wl,--unresolved-symbols=ignore-all
-OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
+OPTS_BUSYTEX_LINK_wasm   =  $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=$(INITIAL_MEMORY) -sMAXIMUM_MEMORY=$(MAXIMUM_MEMORY) -sSTACK_SIZE=5242880 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=busytex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]' --js-library $(ROOT)/kpse_remote.js -Wl,--wrap=kpse_find_file
 
 ##############################################################################################################################
 
@@ -376,27 +376,33 @@ build/%/texlive/texk/bibtex-x/busytex_bibtex8.a: build/%/texlive.configured
 build/%/busytex build/%/busytex.js:
 	mkdir -p $(dir $@)
 	$(CC_$*)  -o    $(basename $@).o -c busytex.c  $(OPTS_BUSYTEX_COMPILE_$*) $(CFLAGS_OPT_$*)
-	$(CXX_$*) -o $@ $(basename $@).o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
+	$(CC_$*)  -o    build/$*/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_$*)
+# 	$(CXX_$*) -o $@ $(basename $@).o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
+	$(CXX_$*) -o $@ $(basename $@).o build/$*/kpse_remote.o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
 	tar -cf $(basename $@).tar build/$*/texlive/texk/web2c/*.c
 
 # Minimal pdfTeX-only build
 OBJ_DEPS_PDFTEX = $(addprefix texlive/libs/, libpng/libpng.a pplib/libpplib.a zlib/libz.a zziplib/libzzip.a xpdf/libxpdf.a) texlive/texk/kpathsea/.libs/libkpathsea.a
-OPTS_BUSYTEX_LINK_PDFTEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=16777216 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=pdftex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
+OPTS_BUSYTEX_LINK_PDFTEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=16777216 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=pdftex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4", "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]' --js-library $(ROOT)/kpse_remote.js -Wl,--wrap=kpse_find_file
 
 build/wasm/pdftex.js:
 	mkdir -p $(dir $@)
 	$(CC_wasm) -o build/wasm/pdftex.o -c busytex.c -DBUSYTEX_PDFTEX $(CFLAGS_OPT_wasm)
-	$(CXX_wasm) -o $@ build/wasm/pdftex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_PDFTEX)) $(addprefix build/wasm/, $(OBJ_DEPS_PDFTEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_PDFTEX_wasm)
+	$(CC_wasm) -o build/wasm/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_wasm)
+# 	$(CXX_wasm) -o $@ build/wasm/pdftex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_PDFTEX)) $(addprefix build/wasm/, $(OBJ_DEPS_PDFTEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_PDFTEX_wasm)
+	$(CXX_wasm) -o $@ build/wasm/pdftex.o build/wasm/kpse_remote.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_PDFTEX)) $(addprefix build/wasm/, $(OBJ_DEPS_PDFTEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_PDFTEX_wasm)
 
 # Minimal XeTeX-only build (requires more deps: fontconfig, harfbuzz, icu, freetype, etc.)
 # XeTeX needs 32MB initial due to ICU data tables (~24MB static data)
 OBJ_DEPS_XETEX = $(addprefix texlive/libs/, harfbuzz/libharfbuzz.a graphite2/libgraphite2.a teckit/libTECkit.a libpng/libpng.a) fontconfig/src/.libs/libfontconfig.a $(addprefix texlive/libs/, freetype2/libfreetype.a zlib/libz.a icu/icu-build/lib/libicuuc.a icu/icu-build/lib/libicudata.a) texlive/texk/kpathsea/.libs/libkpathsea.a expat/libexpat.a texlive/texk/dvipdfm-x/busytex_xdvipdfmx.a
-OPTS_BUSYTEX_LINK_XETEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=xetex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4",  "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]'
+OPTS_BUSYTEX_LINK_XETEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=xetex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4",  "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]' --js-library $(ROOT)/kpse_remote.js -Wl,--wrap=kpse_find_file
 
 build/wasm/xetex.js:
 	mkdir -p $(dir $@)
 	$(CC_wasm) -o build/wasm/xetex.o -c busytex.c -DBUSYTEX_XETEX -DBUSYTEX_XDVIPDFMX $(CFLAGS_OPT_wasm)
-	$(CXX_wasm) -o $@ build/wasm/xetex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
+	$(CC_wasm) -o build/wasm/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_wasm)
+# 	$(CXX_wasm) -o $@ build/wasm/xetex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
+	$(CXX_wasm) -o $@ build/wasm/xetex.o build/wasm/kpse_remote.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
 
 build/native/busytexextra: build/native/busytex                              build/texlive-extra.txt 
 	$(PYTHON) packfs.py -i build/texlive-extra/ -o packfs.h --prefix=/texlive --ld=$(LD_native) --exclude '\.a|\.so|\.pod|\.ld|\.h|\.log'
@@ -469,8 +475,11 @@ build/texlive-extra.profile:
 	echo "collection-fontsrecommended 1"                               >> $@ 
 	echo "collection-latexrecommended  1"                              >> $@ 
 	echo "collection-latexextra  1"                                    >> $@ 
-	echo "collection-langchinese  1"                                   >> $@
-
+	echo "collection-langarabic 1"                                     >> $@
+	echo "collection-langchinese 1"                                    >> $@
+	echo "collection-langjapanese 1"                                   >> $@
+	echo "collection-langkorean 1"                                     >> $@
+	
 build/collection-%.profile:
 	mkdir -p $(dir $@)
 	echo selected_scheme scheme-basic                                        > $@

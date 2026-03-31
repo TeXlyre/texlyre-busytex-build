@@ -254,7 +254,8 @@ class BusytexPipeline {
             TEXMFVAR: this.dir_texmfvar,
             TEXMFCNF: this.dir_cnf,
             TEXMFLOG: this.texmflog,
-            FONTCONFIG_PATH: this.dir_fontconfig
+            FONTCONFIG_PATH: this.dir_fontconfig,
+            TEXLIVE_REMOTE_ENDPOINT: 'http://localhost:8070'
         };
 
         this.remove = (FS, log_path) => FS.analyzePath(log_path).exists ? FS.unlink(log_path) : null;
@@ -417,7 +418,7 @@ class BusytexPipeline {
         return initialized_module;
     }
 
-    async compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js = []) {
+    async compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js = [], remote_endpoint = 'http://localhost:8070') {
         if (!this.supported_drivers.includes(driver))
             throw new Error(`Driver [${driver}] is not supported, only [${this.supported_drivers}] are supported`);
         this.print(`New compilation started: [${main_tex_path}]`);
@@ -456,6 +457,9 @@ class BusytexPipeline {
         }
 
         this.Module = this.reload_module_if_needed(this.Module == null, this.env, this.project_dir, data_packages_js);
+
+        if (remote_endpoint)
+            this.env.TEXLIVE_REMOTE_ENDPOINT = remote_endpoint;
 
         const Module = await this.Module;
         const { FS, PATH } = Module;

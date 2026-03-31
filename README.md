@@ -156,6 +156,29 @@ Individual collections generate separate `.js` and `.data` files (e.g., `collect
 
 Finally, copy the newly generated files from `dist-wasm` to your assets directory.
 
+### Run texlive server
+
+To include additional packages not in `texlive-basic` or `texlive-extra` a server hosting the packages can be run separately to provide the packages on demand. 
+
+TeX Live must be built fully:
+
+```shell
+make -B build/texlive-full.txt 
+```
+
+
+Rebuild busytex (preferrable full `make wasm` after cleaning):
+
+```shell
+make build/wasm/busytex.js
+```
+
+Finally, run the server (can be changed through `busytex_pipeline.js`):
+
+```python
+python3 texlive_server.py --texmf build/texlive-full/texmf-dist --port 8070
+```
+
 ### Run example
 
 To test the different texlive-basic versions of `pdftex`, `xetex`, and `luahbtex` (`texlive 2026`):
