@@ -508,6 +508,22 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	$(foreach name,xetex luahbtex pdftex xelatex luahblatex pdflatex kpsewhich kpseaccess kpsestat kpsereadlink,printf "#!/bin/sh\n$(ROOT)/$(basename $@)/$(BINARCH_native)/busytex $(name)   $$"@ > $(basename $@)/$(BINARCH_native)/$(name) ; chmod +x $(basename $@)/$(BINARCH_native)/$(name); )
 	$(foreach name,mktexlsr.pl updmap-sys.sh updmap.pl fmtutil-sys.sh fmtutil.pl,mv $(basename $@)/texmf-dist/scripts/texlive/$(name) $(basename $@)/$(BINARCH_native)/$(basename $(name)); )
 	TEXLIVE_INSTALL_NO_RESUME=1 $(PERL) source/texmfrepo/install-tl --repository source/texmfrepo --profile build/texlive-$*.profile --custom-bin $(ROOT)/$(basename $@)/$(BINARCH_native) --no-doc-install --no-src-install
+	#
+	mkdir -p $(basename $@)/tlpkg/tlpobj
+	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@)/texmf-dist --exclude='tlpkg'; )
+	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@) tlpkg; )
+	ls $(basename $@)/tlpkg/tlpobj/hyphen-german.tlpobj 2>/dev/null || echo "WARNING: tlpobj missing before generate"
+	$(PERL) -I$(ROOT)/source/texmfrepo/tlpkg $(ROOT)/generate_language.pl \
+	  $(ROOT)/$(basename $@) \
+	  $(ROOT)/source/texmfrepo
+	grep -c "loader" $(basename $@)/texmf-dist/texmf-var/tex/generic/config/language.dat.lua || echo "WARNING: language.dat.lua not updated"
+	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@)/texmf-dist --exclude='tlpkg'; )
+	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@) tlpkg; )
+	ls $(basename $@)/tlpkg/tlpobj/hyphen-german.tlpobj 2>/dev/null || echo "WARNING: tlpobj missing before generate"
+	$(PERL) -I$(ROOT)/source/texmfrepo/tlpkg $(ROOT)/generate_language.pl \
+	  $(ROOT)/$(basename $@) \
+	  $(ROOT)/source/texmfrepo
+	grep -c "loader" $(basename $@)/texmf-dist/texmf-var/tex/generic/config/language.dat.lua || echo "WARNING: language.dat.lua not updated"
 	# 
 	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/fonts.conf
 	mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/conf
@@ -516,20 +532,11 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
 	# regenerate consolidated font maps covering all installed collections
-	mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/dvipdfmx/updmap
-	mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/pdftex/updmap
-	mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/dvips/updmap
-	TEXMFVAR=$(ROOT)/$(basename $@)/texmf-dist/texmf-var \
-	TEXMFSYSVAR=$(ROOT)/$(basename $@)/texmf-dist/texmf-var \
-	TEXMFCNF=$(ROOT)/$(basename $@)/texmf-dist/web2c \
-	TEXMFDIST=$(ROOT)/$(basename $@)/texmf-dist \
-	$(PERL) $(ROOT)/$(basename $@)/$(BINARCH_native)/updmap-sys \
-	  --nohash \
-	  --cnffile $(ROOT)/$(basename $@)/texmf-dist/web2c/updmap.cfg \
-	  --dvipdfmxoutputdir $(ROOT)/$(basename $@)/texmf-dist/texmf-var/fonts/map/dvipdfmx/updmap \
-	  --pdftexoutputdir $(ROOT)/$(basename $@)/texmf-dist/texmf-var/fonts/map/pdftex/updmap \
-	  --dvipsoutputdir $(ROOT)/$(basename $@)/texmf-dist/texmf-var/fonts/map/dvips/updmap \
-	|| echo "updmap-sys failed or not needed, continuing"
+	#mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/dvipdfmx/updmap
+	#mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/pdftex/updmap
+	#mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/dvips/updmap
+	#$(PERL) $$(ls $(ROOT)/$(basename $@)/bin/*/updmap-sys 2>/dev/null | head -1) \
+	#|| echo "updmap-sys failed or not needed, continuing"
 	# Never ship native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
 	rm -f $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.fmt \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.log \
