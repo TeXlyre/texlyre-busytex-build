@@ -521,6 +521,8 @@ class BusytexPipeline {
                     [pdftex_not_final, this.error_messages_fatal, false],
                     [bibtex8, this.error_messages_fatal, true],
                     [pdftex_not_final, this.error_messages_fatal, true],
+                    [pdftex, this.error_messages_all, false],
+                    [pdftex_not_final, this.error_messages_fatal, true],
                     [pdftex, this.error_messages_all, false]
                 ] :
                 [
@@ -530,10 +532,13 @@ class BusytexPipeline {
         else if (driver == 'luahbtex_bibtex8') {
             cmds = bibtex ?
                 [
-                    [luahbtex, this.error_messages_fatal, false],
+                    [luahbtex_not_final, this.error_messages_fatal, false],
                     [bibtex8, this.error_messages_fatal, true],
-                    [luahbtex, this.error_messages_fatal, true],
-                    [luahbtex, this.error_messages_all, true]
+                    [luahbtex_not_final, this.error_messages_fatal, true],
+                    [luahbtex, this.error_messages_all, false],
+                    [luahbtex_not_final, this.error_messages_fatal, true],
+                    [luahbtex, this.error_messages_all, false]
+
                 ] :
                 [
                     [luahbtex, this.error_messages_all, false]
