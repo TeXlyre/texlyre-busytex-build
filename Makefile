@@ -562,7 +562,6 @@ build/collection-%.txt: build/collection-%.profile source/texmfrepo.txt
 	find build/collection-$* > $@
 	tar -czf build/collection-$*.tar.gz build/collection-$*
 
-	
 
 ################################################################################################################
 
