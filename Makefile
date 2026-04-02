@@ -374,7 +374,7 @@ build/%/texlive/texk/bibtex-x/busytex_bibtex8.a: build/%/texlive.configured
 
 build/%/busytex build/%/busytex.js:
 	mkdir -p $(dir $@)
-	$(CC_$*)  -o    $(basename $@).o -c busytex.c  $(OPTS_BUSYTEX_COMPILE_$*) $(CFLAGS_OPT_$*)
+	$(CC_$*)  -o    $(basename $@).o -c busytex.c  $(OPTS_BUSYTEX_COMPILE_$*) $(CFLAGS_OPT_$*) -I$(abspath build/$*/texlive/libs/icu/include)
 	$(CC_$*)  -o    build/$*/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_$*)
 # 	$(CXX_$*) -o $@ $(basename $@).o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
 	$(CXX_$*) -o $@ $(basename $@).o build/$*/kpse_remote.o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
@@ -413,6 +413,7 @@ build/%/texlive/libs/icu/icu-build/lib/libicuuc.a build/%/texlive/libs/icu/icu-b
 	cd                    build/$*/texlive/libs/icu && $(CONFIGURE_$*) $(abspath source/texlive/libs/icu/configure) $(OPTS_ICU_configure_$*)
 	$(MAKE_$*)         -C build/$*/texlive/libs/icu $(OPTS_ICU_configure_make_$*)
 	echo "all install:" > build/$*/texlive/libs/icu/icu-build/test/Makefile
+	sed -i 's/GENCCODE_ASSEMBLY_TYPE=-a gcc/GENCCODE_ASSEMBLY_TYPE=/' build/$*/texlive/libs/icu/icu-build/data/icupkg.inc
 	$(MAKE_$*)         -C build/$*/texlive/libs/icu/icu-build $(OPTS_ICU_make_$*) 
 	$(MAKE_$*)         -C build/$*/texlive/libs/icu/include/unicode
 
@@ -544,13 +545,15 @@ build/wasm/texlive-%.js: build/texlive-%/texmf-dist
 	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
 
 build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt
-	mkdir -p build/wasm/
+	mkdir -p build/wasm/ build/etc-fonts
 	echo > build/empty
 	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
-	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js.tmp --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive
+	printf '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir><cachedir>/texlive/fontconfig-cache</cachedir></fontconfig>' > build/etc-fonts/fonts.conf
+	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-$*/icudt78l.dat
+	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js.tmp --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive --preload build/etc-fonts@/etc/fonts
 	$(NODE) rebuild_fmt_wasm.js $* build/texlive-$*/texmf-dist/texmf-var/web2c
 	@echo "Rebuilding data package with new format files..."
-	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive
+	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive --preload build/etc-fonts@/etc/fonts
 	grep -r -I -h 'ProvidesPackage{' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > build/wasm/texlive-$*.js.providespackage.txt
 	cat build/wasm/texlive-$*.js.providespackage.txt build/wasm/texlive-$*.js > build/wasm/texlive-$*.js.tmp2
 	mv build/wasm/texlive-$*.js.tmp2 build/wasm/texlive-$*.js

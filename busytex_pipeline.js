@@ -255,6 +255,8 @@ class BusytexPipeline {
             TEXMFCNF: this.dir_cnf,
             TEXMFLOG: this.texmflog,
             FONTCONFIG_PATH: this.dir_fontconfig,
+            FONTCONFIG_FILE: this.dir_fontconfig + '/fonts.conf',
+            ICU_DATA: '/texlive/',
             TEXLIVE_REMOTE_ENDPOINT: 'http://localhost:8070'
         };
 
