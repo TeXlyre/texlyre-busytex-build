@@ -120,42 +120,6 @@ rm source/texlive.patched
 make clean
 ```
 
-#### To add new packages, you have two options:
-
-**Option 1: Add to texlive-extra profile (for bundled packages)**
-
-Modify `build/texlive-extra.profile` target in the Makefile to add collections, then run:
-
-```shell
-rm build/texlive-extra.profile build/texlive-extra.txt build/texlive-extra.tar.gz
-rm -rf build/texlive-extra/
-make build/texlive-extra.txt
-make build/wasm/texlive-extra.js
-make dist-wasm
-```
-
-**Option 2: Build individual collections (recommended for modularity)**
-
-Add the collection name to `COLLECTIONS` variable in the Makefile, then run:
-
-```shell
-rm -rf build/collection-*
-rm -rf build/wasm/collection-*
-
-# Build specific collection (e.g., langchinese)
-make build/wasm/collection-langchinese.js
-
-# Or build all defined collections
-make collections-wasm
-
-# Copy to dist
-make dist-wasm
-```
-
-Individual collections generate separate `.js` and `.data` files (e.g., `collection-langchinese.js` and `collection-langchinese.data`) that can be loaded independently, keeping file sizes small and allowing on-demand loading.
-
-Finally, copy the newly generated files from `dist-wasm` to your assets directory.
-
 ### Run texlive server
 
 To include additional packages not in `texlive-basic` or `texlive-extra` a server hosting the packages can be run separately to provide the packages on demand. 
