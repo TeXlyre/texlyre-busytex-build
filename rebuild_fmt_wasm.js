@@ -70,20 +70,29 @@ async function rebuildFormats() {
     Module.ENV['TEXMFHOME'] = '/texlive/texmf-dist';
     Module.ENV['FONTCONFIG_PATH'] = '/texlive';
     Module.ENV['FONTCONFIG_FILE'] = '/texlive/fonts.conf';
+    Module.ENV['TEXMFSYSVAR'] = '/texlive/texmf-dist/texmf-var';
+    Module.ENV['TEXMFSYSCONFIG'] = '/texlive/texmf-dist/texmf-config';
 
-    let lualatexIniPath = '/texlive/texmf-dist/tex/latex/tex-ini-files/lualatex.ini';
-    if (!Module.FS.analyzePath(lualatexIniPath).exists) {
-        const found = findFile(Module.FS, '/texlive', 'lualatex.ini', 6);
-        if (found.length > 0) {
-            lualatexIniPath = found.find(p => p.includes('texmf-dist')) || found[0];
-        }
+    function findIniFile(FS, name) {
+        const candidates = findFile(FS, '/texlive', name, 8);
+        return candidates.find(p => p.includes('texmf-dist')) || candidates[0] || null;
     }
-    console.log('Using lualatex.ini:', lualatexIniPath);
+    console.log('lualatex.ini:', findIniFile(Module.FS, 'lualatex.ini'));
+    console.log('pdflatex.ini:', findIniFile(Module.FS, 'pdflatex.ini'));
+    console.log('xelatex.ini:', findIniFile(Module.FS, 'xelatex.ini'));
 
     const formats = {
         'luahbtex/luahblatex.fmt': {
             args: ['luahbtex', '-ini', '-jobname=luahblatex', '-progname=luahblatex'],
-            iniFile: lualatexIniPath
+            iniFile: findIniFile(Module.FS, 'lualatex.ini')
+        },
+        'pdftex/pdflatex.fmt': {
+            args: ['pdftex', '-ini', '-etex', '-jobname=pdflatex', '-progname=pdflatex'],
+            iniFile: findIniFile(Module.FS, 'pdflatex.ini')
+        },
+        'xetex/xelatex.fmt': {
+            args: ['xetex', '-ini', '-etex', '-jobname=xelatex', '-progname=xelatex'],
+            iniFile: findIniFile(Module.FS, 'xelatex.ini')
         },
     };
 

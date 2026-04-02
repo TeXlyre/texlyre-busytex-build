@@ -514,6 +514,8 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	  $(ROOT)/$(basename $@) \
 	  $(ROOT)/source/texmfrepo
 	grep -c "loader" $(basename $@)/texmf-dist/texmf-var/tex/generic/config/language.dat.lua || echo "WARNING: language.dat.lua not updated"
+	$(PYTHON) filter_language_dat.py $(basename $@)
+	mktexlsr $(basename $@)/texmf-dist
 	# 
 	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/fonts.conf
 	mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/conf
@@ -521,12 +523,6 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	-mv $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/lualatex.fmt $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
-	# regenerate consolidated font maps covering all installed collections
-	#mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/dvipdfmx/updmap
-	#mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/pdftex/updmap
-	#mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/map/dvips/updmap
-	#$(PERL) $$(ls $(ROOT)/$(basename $@)/bin/*/updmap-sys 2>/dev/null | head -1) \
-	#|| echo "updmap-sys failed or not needed, continuing"
 	# Never ship native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
 	rm -f $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.fmt \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.log \
