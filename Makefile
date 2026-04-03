@@ -403,7 +403,7 @@ build/wasm/xetex.js:
 # 	$(CXX_wasm) -o $@ build/wasm/xetex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
 	$(CXX_wasm) -o $@ build/wasm/xetex.o build/wasm/kpse_remote.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
 
-build/native/busytexextra: build/native/busytex                              build/texlive-extra.txt 
+build/native/busytexextra: build/native/busytex build/texlive-extra.txt 
 	$(PYTHON) packfs.py -i build/texlive-extra/ -o packfs.h --prefix=/texlive --ld=$(LD_native) --exclude '\.a|\.so|\.pod|\.ld|\.h|\.log'
 	$(CC_native) -o packfs.o -c packfs.c -DPACKFS_BUILTIN_PREFIX=/texlive -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 	$(CXX_native) -o $@ $<.o packfs.o  $(addprefix build/native/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/native/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/native/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_native) -Wl,--allow-multiple-definition -Wl,--wrap=open,--wrap=close,--wrap=read,--wrap=access,--wrap=lseek,--wrap=stat,--wrap=fstat,--wrap=fopen,--wrap=fileno @packfs.h.txt

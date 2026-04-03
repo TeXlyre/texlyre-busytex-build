@@ -1,0 +1,9 @@
+PORT=8070
+REDIS_PORT=6379
+
+HOST_DOMAIN=texlive2026.texlyre.org
+API_ORIGINS=https://texlive2026.texlyre.org,https://texlyre.org,https://texlyre.github.io
+
+TEXMF_ROOT=../build/texlive-full/texmf-dist
+
+CLOUDFLARE_API_KEY=your_cloudflare_api_key
