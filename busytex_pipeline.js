@@ -460,10 +460,11 @@ class BusytexPipeline {
 
         this.Module = this.reload_module_if_needed(this.Module == null, this.env, this.project_dir, data_packages_js);
 
-        if (remote_endpoint)
-            this.env.TEXLIVE_REMOTE_ENDPOINT = remote_endpoint;
-
         const Module = await this.Module;
+
+        if (remote_endpoint)
+            Module.ENV.TEXLIVE_REMOTE_ENDPOINT = remote_endpoint;
+
         const { FS, PATH } = Module;
 
         const tex_path = PATH.basename(main_tex_path), dirname = PATH.dirname(main_tex_path);
