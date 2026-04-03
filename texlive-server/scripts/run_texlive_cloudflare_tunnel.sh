@@ -28,10 +28,10 @@ fi
 
 # Configuration variables
 CLOUDFLARE_TOKEN="$API_KEY"
-TUNNEL_NAME="texlive"
+TUNNEL_NAME="texlive2026"
 HTTP_SERVICE_URL="http://localhost:$PORT"
 HOSTNAME="$HOST_DOMAIN"
-CREDENTIALS_DIR=~/.cloudflared/texlive
+CREDENTIALS_DIR=~/.cloudflared/texlive2026
 CONFIG_FILE="$CREDENTIALS_DIR/config.yml"
 
 # Color codes for better readability
