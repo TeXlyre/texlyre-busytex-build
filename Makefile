@@ -508,13 +508,6 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	  $(ROOT)/$(basename $@) \
 	  $(ROOT)/source/texmfrepo
 	grep -c "loader" $(basename $@)/texmf-dist/texmf-var/tex/generic/config/language.dat.lua || echo "WARNING: language.dat.lua not updated"
-	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@)/texmf-dist --exclude='tlpkg'; )
-	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@) tlpkg; )
-	ls $(basename $@)/tlpkg/tlpobj/hyphen-german.tlpobj 2>/dev/null || echo "WARNING: tlpobj missing before generate"
-	$(PERL) -I$(ROOT)/source/texmfrepo/tlpkg $(ROOT)/generate_language.pl \
-	  $(ROOT)/$(basename $@) \
-	  $(ROOT)/source/texmfrepo
-	grep -c "loader" $(basename $@)/texmf-dist/texmf-var/tex/generic/config/language.dat.lua || echo "WARNING: language.dat.lua not updated"
 	$(PYTHON) filter_language_dat.py $(basename $@)
 	mktexlsr $(basename $@)/texmf-dist
 	# 
