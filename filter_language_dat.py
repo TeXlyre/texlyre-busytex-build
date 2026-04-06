@@ -2,6 +2,8 @@ import os, re, glob
 
 for profile in ['basic', 'extra']:
     dat = f'build/texlive-{profile}/texmf-dist/texmf-var/tex/generic/config/language.dat'
+    if not os.path.exists(dat):
+        continue
     root = f'build/texlive-{profile}'
 
     def file_exists(name):
