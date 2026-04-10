@@ -80,8 +80,9 @@ cd emsdk
 source emsdk_env.sh
 
 # clone busytex
+# cd ../ 
 git clone https://github.com/TeXlyre/texlyre-busytex-build
-cd busytex
+cd texlyre-busytex-build
 
 # set make parallelism
 export MAKEFLAGS=-j8
@@ -137,11 +138,14 @@ Rebuild busytex (preferrable full `make wasm` after cleaning):
 make build/wasm/busytex.js
 ```
 
-Finally, run the server (can be changed through `busytex_pipeline.js`):
+Finally, either run a [production server](./texlive-server/README.md) or run a simple development server:
 
 ```python
 python3 texlive_server.py --texmf build/texlive-full/texmf-dist --port 8070
 ```
+
+Note that the remote-endpoint pointing to this server can be changed through `busytex_pipeline.js` `compile()` method on initialization.
+
 
 ### Run example
 
