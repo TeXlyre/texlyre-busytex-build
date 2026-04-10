@@ -502,7 +502,7 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	#
 	mkdir -p $(basename $@)/tlpkg/tlpobj
 	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@)/texmf-dist --exclude='tlpkg'; )
-	#$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@) tlpkg; )
+	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@) tlpkg; )
 	ls $(basename $@)/tlpkg/tlpobj/hyphen-german.tlpobj 2>/dev/null || echo "WARNING: tlpobj missing before generate"
 	$(PERL) -I$(ROOT)/source/texmfrepo/tlpkg $(ROOT)/generate_language.pl \
 	  $(ROOT)/$(basename $@) \
