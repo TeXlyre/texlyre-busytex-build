@@ -21,7 +21,7 @@ BUSYTEX_WEB2CBIN     = fixwrites makecpool splitup web2c
 
 # Dynamic memory: start small, grow as needed
 INITIAL_MEMORY       = 67108864    # 64MB initial
-MAXIMUM_MEMORY       = 636870912   # 612MB max
+MAXIMUM_MEMORY       = 603979776   # 576MB max
 CFLAGS_OPT_native    = -O3
 # Explicitly enable exceptions and RTTI in case they are disabled by default (such as in Cosmopolitan Libc).
 CXXFLAGS_native      = -fexceptions -frtti
