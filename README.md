@@ -70,8 +70,26 @@ split -b2G -d texlive2026.iso texlive2026.iso.
 
 ### Building from source
 ```shell
-# install dependencies: wget, cmake, gperf, p7zip-full, emscripten
-apt-get install wget cmake gperf p7zip-full 
+# install dependencies: wget, cmake, gperf, p7zip-full, ... emscripten
+apt-get install -y \
+  libnsl-dev \
+  build-essential \
+  coreutils \
+  cmake \
+  bash \
+  git \
+  xz-utils \
+  wget \
+  perl \
+  gperf \
+  p7zip-full \
+  python3 \
+  gh \
+  strace \
+  libarchive-tools \
+  curl \
+  dos2unix \
+  texlive-binaries
 git clone https://github.com/emscripten-core/emsdk
 cd emsdk
 ./emsdk update-tags
