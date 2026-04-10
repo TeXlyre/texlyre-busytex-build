@@ -1,10 +1,11 @@
-import os, re, glob
+import os, re, sys
 
-for profile in ['basic', 'extra']:
-    dat = f'build/texlive-{profile}/texmf-dist/texmf-var/tex/generic/config/language.dat'
+profiles = sys.argv[1:] if len(sys.argv) > 1 else ['build/texlive-basic', 'build/texlive-extra']
+
+for root in profiles:
+    dat = os.path.join(root, 'texmf-dist/texmf-var/tex/generic/config/language.dat')
     if not os.path.exists(dat):
         continue
-    root = f'build/texlive-{profile}'
 
     def file_exists(name):
         return bool(os.popen(f'find {root} -name "{name}" 2>/dev/null').read().strip())
@@ -15,10 +16,10 @@ for profile in ['basic', 'extra']:
             return False
         with open(path.splitlines()[0]) as f:
             content = f.read()
-        for dep in re.findall(r'\\input\s+(\S+\.tex)', content):
-            if not file_exists(os.path.basename(dep)):
-                return False
-        return True
+        deps = re.findall(r'\\input\s+(\S+\.tex)', content)
+        if not deps:
+            return True
+        return any(file_exists(os.path.basename(dep)) for dep in deps)
 
     lines_out = []
     with open(dat) as f:
