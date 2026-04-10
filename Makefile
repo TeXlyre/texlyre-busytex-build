@@ -537,7 +537,7 @@ build/wasm/texlive-%.js: build/texlive-%/texmf-dist
 	grep -r -I -h -E '\\Provides(Expl)?(Package|Class|File)' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
 	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
 
-build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt
+build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat
 	mkdir -p build/wasm/ build/etc-fonts
 	echo > build/empty
 	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
