@@ -4,38 +4,67 @@ on:
   workflow_dispatch:
     inputs:
       busytexreleasetag:
-        description: 'busytex release tag'
+        description: 'busytex native release tag'
+        required: true
+        default: build_native_25cb7a9ae6f588003d82857b956e4965bea9a753_24562298930_1
+      privaterepo:
+        description: 'Use authenticated download (required for private repos)'
+        type: boolean
         required: false
-        default: 'build_native_f07c747e4a73cfde8e174bfa67ba8aca28d1a161_21102896642_1'
+        default: false
 
 env:
-  UBUNTUPACKAGES: texlive-latex-extra texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended
-  EMSCRIPTEN_VERSION: 3.1.43
-  MAKE_PARALLELISM: -j2
+  EMSCRIPTEN_VERSION: 5.0.4
+  MAKE_PARALLELISM: -j4
 
 jobs:
 
   build-wasm:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/share/swift \
+            /usr/local/.ghcup \
+            /usr/lib/jvm \
+            /usr/share/gradle-* \
+            /usr/share/miniconda \
+            /usr/local/share/chromium \
+            /usr/local/share/powershell
+          sudo docker image prune -af 2>/dev/null || true
+          df -h
+
       - name: Install Prerequisites
-        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools
+        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries
 
       - uses: actions/checkout@v4
 
       - name: Download native binaries
-        run:  make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexreleasetag }} download-native
-      
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.privaterepo }}" = "true" ]; then
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexreleasetag }} download-native-auth
+          else
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexreleasetag }} download-native
+          fi
+
       - name: Download TexLive Full
-        run:  make source/texmfrepo.txt
-      
+        run: make source/texmfrepo.txt
+
       - name: Install TexLive
         env:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
-        run: make build/texlive-basic.txt build/texlive-full.txt
-      
-      - name: Clean-up texmf sources
-        run:  rm -rf source/texmfrepo
+        run: make build/texlive-basic.txt build/texlive-recommended.txt build/texlive-extra.txt
+
+      - name: Clean-up texmf sources and ISO
+        run: rm -rf source/texmfrepo source/texlive2026.iso
 
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v13
@@ -43,7 +72,7 @@ jobs:
           version: ${{env.EMSCRIPTEN_VERSION}}
 
       - name: Clone/patch TexLive and dependencies
-        run:  make source/texlive.txt build/versions.txt
+        run: make source/texlive.txt build/versions.txt
 
       - name: Build wasm busytex
         env:
@@ -53,10 +82,45 @@ jobs:
       - name: Create packages and dist
         run: |
             make build/wasm/texlive-basic.js
-            make -e TEXMFFULL=build/texlive-full $(printf "build/wasm/ubuntu/%s.js " $UBUNTUPACKAGES)
+            make build/wasm/texlive-recommended.js
+            make build/wasm/texlive-extra.js
             make dist-wasm
+
+      - name: Post-process hyphenation and XeTeX fmt
+        run: make wasm-postbuild-hyphenation-fmt
+
+      - name: Smoke test WASM build
+        run: make smoke-wasm
 
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: chown $(whoami) -R . && gh --version && gh release create build_wasm_${{github.sha}}_${{ github.run_id }}_${{ github.run_attempt }} -t "Wasm assets" busytex_pipeline.js busytex_worker.js build/versions.txt build/wasm/busytex.js build/wasm/busytex.wasm  source/texmfrepo.txt build/texlive-basic/texmf-dist/dvipdfmx/dvipdfmx.cfg build/texlive-basic/texmf-dist/web2c/texmf.cnf build/texlive-basic/texmf-dist/web2c/updmap.cfg build/texlive-basic.profile build/texlive-basic.tar.gz build/texlive-basic.txt  build/wasm/texlive-basic.js build/wasm/texlive-basic.data build/wasm/texlive-basic.js.providespackage.txt build/texlive-full.txt build/texlive-full.profile $(printf "build/wasm/ubuntu/%s.js " $UBUNTUPACKAGES) $(printf "build/wasm/ubuntu/%s.data " $UBUNTUPACKAGES) $(printf "build/wasm/ubuntu/%s.js.skip.txt " $UBUNTUPACKAGES) $(printf "build/wasm/ubuntu/%s.js.good.txt " $UBUNTUPACKAGES) $(printf "build/wasm/ubuntu/%s.js.providespackage.txt " $UBUNTUPACKAGES) $(printf "build/wasm/ubuntu/%s.js.ubuntu.txt " $UBUNTUPACKAGES)
+        run: |
+          chown $(whoami) -R . && gh --version && gh release create \
+            build_wasm_${{github.sha}}_${{ github.run_id }}_${{ github.run_attempt }} \
+            -t "Wasm assets" \
+            web/busytex_pipeline.js \
+            web/busytex_worker.js \
+            build/versions.txt \
+            build/wasm/busytex.js \
+            build/wasm/busytex.wasm \
+            source/texmfrepo.txt \
+            build/texlive-basic/texmf-dist/dvipdfmx/dvipdfmx.cfg \
+            build/texlive-basic/texmf-dist/web2c/texmf.cnf \
+            build/texlive-basic/texmf-dist/web2c/updmap.cfg \
+            build/texlive-basic.profile \
+            build/texlive-basic.tar.gz \
+            build/texlive-basic.txt \
+            build/wasm/texlive-basic.js \
+            build/wasm/texlive-basic.data \
+            build/wasm/texlive-basic.js.providespackage.txt \
+            build/texlive-recommended.txt \
+            build/texlive-recommended.profile \
+            build/wasm/texlive-recommended.js \
+            build/wasm/texlive-recommended.data \
+            build/wasm/texlive-recommended.js.providespackage.txt \
+            build/texlive-extra.txt \
+            build/texlive-extra.profile \
+            build/wasm/texlive-extra.js \
+            build/wasm/texlive-extra.data \
+            build/wasm/texlive-extra.js.providespackage.txt      
