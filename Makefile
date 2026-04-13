@@ -547,7 +547,7 @@ build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt buil
 	printf '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir><cachedir>/texlive/fontconfig-cache</cachedir></fontconfig>' > build/etc-fonts/fonts.conf
 	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-$*/icudt78l.dat
 	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js.tmp --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive --preload build/etc-fonts@/etc/fonts
-	-$(NODE) rebuild_fmt_wasm.js $* build/texlive-$*/texmf-dist/texmf-var/web2c
+	-$(NODE) tools/rebuild_fmt_wasm.js $* build/texlive-$*/texmf-dist/texmf-var/web2c
 	@echo "Rebuilding data package with new format files..."
 	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive --preload build/etc-fonts@/etc/fonts
 	grep -r -I -h 'ProvidesPackage{' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > build/wasm/texlive-$*.js.providespackage.txt
