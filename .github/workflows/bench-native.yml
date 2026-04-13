@@ -47,8 +47,8 @@ jobs:
 #      - name: Test arxiv submissions
 #        run: |
 #            #bash build_arxiv_strace.sh 1702.00186 || true  # 'access', 'lstat', 'fstat', 'stat', 'open', 'read', 'unlink', 'mmap',  'readv', 'close', 'lseek', 'writev', 'fcntl', 'munmap', 'arch_prctl', 'brk', 'execve', 'exit_group', 'getcwd', 'getdents64', 'ioctl', 'rt_sigaction', 'rt_sigprocmask', 'set_tid_address'
-#            mkdir -p arxiv-pdf && python busytexmk.py --driver pdflatex --bibtex --DIST ./dist-native --arxiv-id 1702.00186 --log arxiv-pdf/1702.00186.log -o arxiv-pdf/1702.00186.pdf
-#            mkdir -p arxiv-pdf && python busytexmk.py --driver pdflatex --bibtex --DIST ./dist-native --arxiv-id 1702.00172 --log arxiv-pdf/1702.00172.log -o arxiv-pdf/1702.00172.pdf
+#            mkdir -p arxiv-pdf && python cli/busytexmk.py --driver pdflatex --bibtex --DIST ./dist-native --arxiv-id 1702.00186 --log arxiv-pdf/1702.00186.log -o arxiv-pdf/1702.00186.pdf
+#            mkdir -p arxiv-pdf && python cli/busytexmk.py --driver pdflatex --bibtex --DIST ./dist-native --arxiv-id 1702.00172 --log arxiv-pdf/1702.00172.log -o arxiv-pdf/1702.00172.pdf
 #
 #      - name: Download benchset
 #        run: wget ${{env.BENCHSETURLS}}
@@ -57,7 +57,7 @@ jobs:
 #        run: |
 #            for driver in pdflatex xelatex; do
 #                mkdir -p logs_cosmo$driver
-#                python busytexmk.py --tmp-dir-delete --driver $driver --bibtex --DIST ./dist-native --log=bench.log --log-ok-dir=OK --log-fail-dir=FAIL --arxiv-tar ${{env.BENCHSETTARS}}
+#                python cli/busytexmk.py --tmp-dir-delete --driver $driver --bibtex --DIST ./dist-native --log=bench.log --log-ok-dir=OK --log-fail-dir=FAIL --arxiv-tar ${{env.BENCHSETTARS}}
 #                mv bench.log OK FAIL logs_cosmo$driver 
 #            done
 #      
@@ -73,7 +73,7 @@ jobs:
 #        run: |
 #            for driver in pdflatex xelatex; do
 #                mkdir -p logs_cosmo$driver
-#                python busytexmk.py --tmp-dir-delete --driver $driver --bibtex --DIST ./dist-native --log=bench.log --log-ok-dir=OK --log-fail-dir=FAIL --arxiv-tar ${{env.BENCHSETTARS}}
+#                python cli/busytexmk.py --tmp-dir-delete --driver $driver --bibtex --DIST ./dist-native --log=bench.log --log-ok-dir=OK --log-fail-dir=FAIL --arxiv-tar ${{env.BENCHSETTARS}}
 #                mv bench.log OK FAIL logs_cosmo$driver
 #            done
 #      

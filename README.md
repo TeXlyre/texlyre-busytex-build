@@ -1,184 +1,183 @@
-# Programs from TexLive 2026 compiled with Emscripten into a single fully static binary (x86_64-linux / WASM)
+# TeXlyre-BusyTeX
 
-Based on [busytex](https://github.com/busytex/busytex)
+TeX Live 2026 compiled into a single fully static binary (x86_64-linux) and a WebAssembly module, based on [busytex](https://github.com/busytex/busytex).
 
-Currently compiles into a **fully static binary** (via musl on Alpine Linux):
-- xetex
-- pdftex
-- luahbtex
-- bibtex8
-- xdvipdfmx
+Bundled engines and tools:
+- xetex, pdftex, luahbtex
+- bibtex8, xdvipdfmx, makeindex
 - kpsewhich, kpsestat, kpseaccess, kpsereadlink
-- makeindex
 
-Supported architecture targets:
-- x86_64-linux
-- WASM32
+Supported targets: `x86_64-linux` (static, musl) and `wasm32`.
 
-Future work:
-- mf-nowin
-- LuaMetaTex / LMTX (lua)
-- tlmgr (perl, web requests)
-- Biber (perl)
-- mktexlsr, fmtutil, updmap (perl)
+## License
 
-### License
+AGPL-3.0-or-later. Based on [busytex](https://github.com/busytex/busytex) (MIT). See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-This project is licensed under AGPL-3.0-or-later.
+## Repository layout
 
-Original work based on [busytex](https://github.com/busytex/busytex) (MIT License).
-Modifications and improvements by TeXlyre are licensed under AGPL-3.0-or-later.
+```
+src/              C sources (busytex.c, packfs.c, kpse_remote.c, headers)
+web/              Browser runtime (busytex_pipeline.js, busytex_worker.js)
+tools/            Build-time helpers invoked by the Makefile
+cli/              User-facing runners (busytexmk.py, build_arxiv.*)
+scripts/          Top-level build orchestration (build-wasm.sh, build-cosmo.sh)
+example/          Demo web app and test TeX sources
+texlive-server/   Optional on-demand TeX Live package server
+.github/workflows/ CI definitions
+```
 
-See [LICENSE](LICENSE) for AGPL-3.0 terms and [NOTICE](NOTICE) for detailed attribution.
+## Usage
 
-### Usage
+### WASM (browser)
+
+Download the latest release assets and serve the example:
+
 ```shell
-# wasm version, download latest compiled assets, launch the web server example.py and then go to http://localhost:8080/example/example.html
 mkdir -p dist
-wget -P dist --backups=1 $(printf "https://github.com/busytex/busytex/releases/latest/download/%s " busytex_pipeline.js busytex_worker.js    busytex.wasm busytex.js texlive-basic.js texlive-basic.data    ubuntu-texlive-latex-extra.data ubuntu-texlive-latex-extra.js    ubuntu-texlive-latex-recommended.data ubuntu-texlive-latex-recommended.js    ubuntu-texlive-science.data ubuntu-texlive-science.js)
-python3 example/example.py
+wget -P dist --backups=1 $(printf "https://github.com/busytex/busytex/releases/latest/download/%s " \
+  busytex_pipeline.js busytex_worker.js \
+  busytex.wasm busytex.js \
+  texlive-basic.js texlive-basic.data \
+  ubuntu-texlive-latex-extra.data ubuntu-texlive-latex-extra.js \
+  ubuntu-texlive-latex-recommended.data ubuntu-texlive-latex-recommended.js \
+  ubuntu-texlive-science.data ubuntu-texlive-science.js)
 
-# native version
+python3 example/example.py
+```
+
+Then open http://localhost:8080/example/example.html.
+
+### Native
+
+```shell
 sh example/example.sh
 ```
+
+### TeX Live 2026 ISO
 
 ```shell
 wget http://mirrors.ctan.org/systems/texlive/Images/texlive2026.iso
 split -b2G -d texlive2026.iso texlive2026.iso.
 ```
 
-### Help needed
-- single page HTML5 webapp: https://diveinto.html5doctor.com/offline.html
-- refactor data packages subsystem in Emscripten: https://github.com/emscripten-core/emscripten/issues/14385
-- LLVM's support for localizing global system in WASM object files: https://bugs.llvm.org/show_bug.cgi?id=51279
-- upstream build sequence to TexLive: https://tug.org/pipermail/tlbuild/2021q1/004806.html
-- various Emscripten improvements: https://github.com/emscripten-core/emscripten/issues/12093, https://github.com/emscripten-core/emscripten/issues/12256, https://github.com/emscripten-core/emscripten/issues/13466, https://github.com/emscripten-core/emscripten/issues/13219
-- better error catching at all stages including WASM module initialization: https://github.com/emscripten-core/emscripten/issues/14777
-- explore defining DLLPROC instead of redefining main functions
-- complete investigation of feasibility of porting Biber to WASM/browser: https://github.com/plk/biber/issues/338, https://github.com/busytex/buildbiber
-- review shipped TexLive packages in order to review useless files to save space
-- review fonts / fontmaps / hyphenation shipped in TexLive packages
-- optimizing binary size. any stripping possible?
-- compile for x86_64-linux-glibc with clang (to match WASM toolchain)
-- set up x86_64-linux binaries Github Actions test for WSLv1
-- minimize build sequence in Makefile as much as possible
-- test of WASM binaries using node.js, test preloading of data packages
-- preloaded minimal single-file, single-engine versions (both WASM and x86_64-linux) with just TexLive Basic and latex-base
-- explore creating virtual and LD_PRELOAD-based file systems: to avoid unpacking the ISO files or ZIP files (to be used even outside BusyTeX context); to embed Tex packages / Perl scripts in the native build 
-- figure out how to embed static perl with Perl scripts (fmtutil.pl, updmap.pl, https://perldoc.perl.org/perlembed#Using-embedded-Perl-with-POSIX-locales, https://www.cs.ait.ac.th/~on/O/oreilly/perl/advprog/ch19_02.htm, https://www.foo.be/docs/tpj/issues/vol1_4/tpj0104-0009.html, http://www.kaiyuanba.cn/content/develop/Perl/Extending_And_Embedding_Perl.pdf)
-- pre-parse ProvidesPackage meta for data packages
+## Building from source
 
-### Building from source
+### Prerequisites
+
 ```shell
-# install dependencies: wget, cmake, gperf, p7zip-full, ... emscripten
 apt-get install -y \
-  libnsl-dev \
-  build-essential \
-  coreutils \
-  cmake \
-  bash \
-  git \
-  xz-utils \
-  wget \
-  perl \
-  gperf \
-  p7zip-full \
-  python3 \
-  gh \
-  strace \
-  libarchive-tools \
-  curl \
-  dos2unix \
-  texlive-binaries
+  libnsl-dev build-essential coreutils cmake bash git \
+  xz-utils wget perl gperf p7zip-full python3 gh strace \
+  libarchive-tools curl dos2unix texlive-binaries
+```
+
+### Emscripten
+
+```shell
 git clone https://github.com/emscripten-core/emsdk
 cd emsdk
 ./emsdk update-tags
 ./emsdk install tot
 ./emsdk activate tot
 source emsdk_env.sh
+cd ..
+```
 
-# clone busytex
-# cd ../ 
+### Build
+
+```shell
 git clone https://github.com/TeXlyre/texlyre-busytex-build
 cd texlyre-busytex-build
 
-# set make parallelism
 export MAKEFLAGS=-j8
 
-# download and patch texlive into ./source
+# Fetch and patch TeX Live sources
 make source/texlive.txt build/versions.txt
 
-# build native tools and fonts file into ./build/native
+# Native tools and binaries
 make native
 
-# smoke test native binaries
-make test
+# Smoke test
+make smoke-native
 
-# build texlive
+# TeX Live tree
 make source/texmfrepo.txt
 make build/texlive-basic.txt build/texlive-extra.txt build/texlive-full.txt
 
-# build wasm tools into ./build/wasm
+# WASM build
 make wasm
 
-# build TeX Directory Structure (TDS)
-make tds-basic
-
-# test native binaries
+# End-to-end example
 sh example/example.sh
 
-# reproduce and pack Ubuntu TexLive packages into wasm data files
+# Ubuntu TeX Live data packages
 make build/wasm/texlive-basic.js
 make build/wasm/texlive-extra.js
 
-# copies binaries and TexLive TDS into ./dist
+# Distribution bundles
 make dist-native dist-wasm
+```
 
-# remove ./build and ./source completely
+### Clean
+
+```shell
 rm source/texlive.patched
 make clean
 ```
 
-### Run texlive server
+## TeX Live package server
 
-To include additional packages not in `texlive-basic` or `texlive-extra` a server hosting the packages can be run separately to provide the packages on demand. 
+For packages not shipped in `texlive-basic` or `texlive-extra`, run a server that streams them on demand. The remote endpoint is configurable via the `compile()` method in `web/busytex_pipeline.js`.
 
-TeX Live must be built fully:
-
-```shell
-make -B build/texlive-full.txt 
-```
-
-
-Rebuild busytex (preferrable full `make wasm` after cleaning):
+Build the full TeX Live tree first:
 
 ```shell
+make -B build/texlive-full.txt
 make build/wasm/busytex.js
 ```
 
-Finally, either run a [production server](./texlive-server/README.md) or run a simple development server:
+Then either run a [production server](./texlive-server/README.md) or the development server described in that same README.
 
-```python
-python3 texlive_server.py --texmf build/texlive-full/texmf-dist --port 8070
-```
-
-Note that the remote-endpoint pointing to this server can be changed through `busytex_pipeline.js` `compile()` method on initialization.
-
-
-### Run example
-
-To test the different texlive-basic versions of `pdftex`, `xetex`, and `luahbtex` (`texlive 2026`):
+## Running the demo
 
 ```shell
 python3 example/example.py --port 8183
 ```
 
-Then navigate to `http://localhost:8183/example/example.html`
+Open http://localhost:8183/example/example.html. To test a freshly built WASM bundle, copy `./dist-wasm/*` to `./dist/`.
 
-to use a newly built (from source) wasm, copy the contents of `./dist-wasm` to `./dist`
+## Roadmap
 
-### References
-- [busytex texlive 2026 update](https://github.com/SiglumProject/busytex)
+- mf-nowin
+- LuaMetaTeX / LMTX (lua)
+- tlmgr (perl)
+- Biber (perl)
+- mktexlsr, fmtutil, updmap (perl)
+
+## Help wanted
+
+- Single-page HTML5 offline webapp ([html5doctor](https://diveinto.html5doctor.com/offline.html))
+- Refactor Emscripten data-packages subsystem ([issue #14385](https://github.com/emscripten-core/emscripten/issues/14385))
+- LLVM localize-globals in WASM objects ([bug 51279](https://bugs.llvm.org/show_bug.cgi?id=51279))
+- Upstream build-sequence changes to TeX Live ([tlbuild thread](https://tug.org/pipermail/tlbuild/2021q1/004806.html))
+- Assorted Emscripten improvements ([#12093](https://github.com/emscripten-core/emscripten/issues/12093), [#12256](https://github.com/emscripten-core/emscripten/issues/12256), [#13466](https://github.com/emscripten-core/emscripten/issues/13466), [#13219](https://github.com/emscripten-core/emscripten/issues/13219))
+- Better WASM init error surfacing ([#14777](https://github.com/emscripten-core/emscripten/issues/14777))
+- Explore `DLLPROC` as an alternative to redefining `main` symbols
+- Biber on WASM ([biber #338](https://github.com/plk/biber/issues/338), [buildbiber](https://github.com/busytex/buildbiber))
+- Audit shipped TeX Live packages to reduce footprint (fonts, fontmaps, hyphenation)
+- Binary size reduction / stripping
+- Build x86_64-linux-glibc with clang to match the WASM toolchain
+- GitHub Actions test for x86_64 binaries on WSLv1
+- Trim Makefile build sequence
+- Node.js tests for WASM binaries and data-package preloading
+- Preloaded single-file, single-engine minimal builds (WASM + native) with basic LaTeX
+- Virtual / `LD_PRELOAD`-based filesystems to avoid ISO/ZIP unpacking and embed TeX packages in native builds
+- Static Perl embedding for `fmtutil.pl`, `updmap.pl` ([perlembed](https://perldoc.perl.org/perlembed), [extending/embedding guide](http://www.kaiyuanba.cn/content/develop/Perl/Extending_And_Embedding_Perl.pdf))
+- Pre-parse `ProvidesPackage` metadata for data packages
+
+## References
+
+- [busytex (pdftex and xetex) TL2025 update](https://github.com/SiglumProject/busytex)
 - [pdftex.js](https://github.com/dmonad/pdftex.js)
 - [xetex.js](https://github.com/lyze/xetex-js)
 - [texlive.js](https://github.com/manuels/texlive.js/)
@@ -187,10 +186,6 @@ to use a newly built (from source) wasm, copy the contents of `./dist-wasm` to `
 - [SwiftLaTeX](https://github.com/SwiftLaTeX/SwiftLaTeX)
 - [JavascriptSubtitlesOctopus](https://github.com/Dador/JavascriptSubtitlesOctopus)
 - [js-sha1](https://raw.githubusercontent.com/emn178/js-sha1)
-- [BLFS](http://www.linuxfromscratch.org/blfs/view/svn/pst/texlive.html)
-- https://github.com/schlamar/latexmk.py/pull/11
-- https://github.com/schlamar/latexmk.py
-- https://github.com/JanKanis/latexmk.py
-- https://mg.readthedocs.io/latexmk.html
-- https://ctan.org/tex-archive/support/latexmk
-- https://metacpan.org/release/TSCHWAND/TeX-AutoTeX-v0.906.0/view/lib/TeX/AutoTeX/File.pm
+- [BLFS TeX Live](http://www.linuxfromscratch.org/blfs/view/svn/pst/texlive.html)
+- latexmk: [CTAN](https://ctan.org/tex-archive/support/latexmk), [docs](https://mg.readthedocs.io/latexmk.html), [latexmk.py](https://github.com/schlamar/latexmk.py), [fork](https://github.com/JanKanis/latexmk.py), [PR #11](https://github.com/schlamar/latexmk.py/pull/11)
+- [TeX::AutoTeX::File](https://metacpan.org/release/TSCHWAND/TeX-AutoTeX-v0.906.0/view/lib/TeX/AutoTeX/File.pm)

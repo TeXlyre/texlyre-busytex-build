@@ -8,12 +8,12 @@ async function rebuildFormats() {
     const hostTexlive = `./build/texlive-${profile}`;
 
     console.log(`Loading busytex module...`);
-    const BusytexModule = require('./build/wasm/busytex.js');
+    const BusytexModule = require(require('path').resolve(process.cwd(), 'build/wasm/busytex.js'));
 
     const Module = await BusytexModule({
         locateFile: (filename, prefix) => {
             if (filename.endsWith('.wasm')) {
-                return './build/wasm/' + filename;
+                return require('path').resolve(process.cwd(), 'build/wasm', filename);
             }
             return prefix + filename;
         },
