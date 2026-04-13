@@ -503,7 +503,8 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	mkdir -p $(basename $@)/tlpkg/tlpobj
 	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@)/texmf-dist --exclude='tlpkg'; )
 	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@) tlpkg; )
-    # Extract legacy hyphenation packages (russian/ukrainian)
+	$(foreach name,$(shell ls source/texmfrepo/archive/dehyph-exptl.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@)/texmf-dist; )
+	# Extract legacy hyphenation packages (russian/ukrainian)
 	$(foreach name,ruhyphen ukrhyph,$(if $(wildcard source/texmfrepo/archive/$(name).r*.tar.xz),tar -xJf $(shell ls source/texmfrepo/archive/$(name).r*.tar.xz | grep -v '\.source\.' | grep -v '\.doc\.' | head -1) -C $(basename $@)/texmf-dist --exclude='tlpkg'; ))
 	#
     ls $(basename $@)/tlpkg/tlpobj/hyphen-german.tlpobj 2>/dev/null || echo "WARNING: tlpobj missing before generate"
@@ -514,9 +515,9 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	$(PYTHON) tools/filter_language_dat.py $(basename $@)
 	mktexlsr $(basename $@)/texmf-dist
 	# 
-	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/fonts.conf
+	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir><cachedir>/texlive/fontconfig-cache</cachedir></fontconfig>' > $(basename $@)/fonts.conf
 	mkdir -p $(basename $@)/texmf-dist/texmf-var/fonts/conf
-	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/texmf-dist/texmf-var/fonts/conf/fonts.conf
+	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir><cachedir>/texlive/fontconfig-cache</cachedir></fontconfig>' > $(basename $@)/texmf-dist/texmf-var/fonts/conf/fonts.conf
 	-mv $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/lualatex.fmt $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
@@ -540,7 +541,7 @@ build/wasm/texlive-%.js: build/texlive-%/texmf-dist
 	grep -r -I -h -E '\\Provides(Expl)?(Package|Class|File)' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > $@.providespackage.txt
 	cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
 
-build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat
+build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt build/texlive-%/caches.stamp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat
 	mkdir -p build/wasm/ build/etc-fonts
 	echo > build/empty
 	echo 'web_user:x:0:0:emscripten:/home/web_user:/bin/false' > build/passwd
@@ -560,6 +561,24 @@ build/wasm/ubuntu/%.js: $(TEXMFFULL)
 	mkdir -p $(dir $@)
 	$(PYTHON) $(EMROOT)/tools/file_packager.py $(basename $@).data --js-output=$@ --export-name=BusytexPipeline --lz4 --use-preload-cache $(shell $(PYTHON) tools/ubuntu_package_preload.py --package $(subst _, ,$(notdir $(basename $@))) --texmf $(TEXMFFULL) --url $(URL_ubuntu_release_cache) --skip-log $@.skip.txt --good-log $@.good.txt --providespackage-log $@.providespackage.txt --ubuntu-log $@.ubuntu.txt)
 	-cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
+
+################################################################################################################
+
+FC_CACHE_native   = $(abspath build/native/fontconfig/fc-cache/fc-cache)
+
+build/texlive-%/fontconfig-cache.stamp: build/texlive-%.txt $(FC_CACHE_native)
+	bash tools/generate_fontconfig_cache.sh $(abspath build/texlive-$*/texmf-dist) $(abspath build/texlive-$*/fontconfig-cache) $(FC_CACHE_native)
+	cp -r build/texlive-$*/fontconfig-cache/cache/. build/texlive-$*/fontconfig-cache/
+	rm -rf build/texlive-$*/fontconfig-cache/cache
+	touch $@
+
+build/texlive-%/luaotfload-cache.stamp: build/texlive-%.txt $(BUSYTEX_native)
+	bash tools/install_luaotfload_scripts.sh $(abspath source/texmfrepo/archive) $(abspath build/texlive-$*)
+	bash tools/generate_luaotfload_cache.sh $(abspath build/texlive-$*/texmf-dist) $(abspath build/texlive-$*/texmf-dist/texmf-var) $(BUSYTEX_native)
+	touch $@
+
+build/texlive-%/caches.stamp: build/texlive-%/fontconfig-cache.stamp build/texlive-%/luaotfload-cache.stamp
+	touch $@
 
 ################################################################################################################
 
