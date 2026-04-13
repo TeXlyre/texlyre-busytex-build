@@ -15,3 +15,7 @@ build/
 source/
 dist-wasm/
 dist-native/
+
+src/packfs.h
+src/packfs.h.txt
+src/packfs.h.o/
