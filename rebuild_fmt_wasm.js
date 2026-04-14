@@ -114,40 +114,43 @@ async function rebuildFormats() {
 
         try {
             console.log('\nExecuting format generation...');
-            Module.callMain(args);
-        } catch (e) {
-            // memory exhaustion during teardown is non-fatal if fmt was written
-        }
+            const exitCode = Module.callMain(args);
+            console.log(`\nExit code: ${exitCode}`);
 
-        const filesInDir = Module.FS.readdir(workDir);
-        console.log(`Files in ${workDir}:`, filesInDir);
+            const filesInDir = Module.FS.readdir(workDir);
+            console.log(`Files in ${workDir}:`, filesInDir);
 
-        const fmtExists = Module.FS.analyzePath(workDir + '/' + fmtFileName).exists;
+            const fmtExists = Module.FS.analyzePath(workDir + '/' + fmtFileName).exists;
 
-        if (!fmtExists) {
-            const logPath = `${workDir}/${path.basename(fmtFileName, '.fmt')}.log`;
-            if (Module.FS.analyzePath(logPath).exists) {
-                const logContent = Module.FS.readFile(logPath, { encoding: 'utf8' });
-                console.log(`\n--- ${path.basename(logPath)} (last 100 lines) ---`);
-                const lines = logContent.split('\n');
-                console.log(lines.slice(-100).join('\n'));
-                console.log('--- end of log ---\n');
+            if (!fmtExists) {
+                const logPath = `${workDir}/luahblatex.log`;
+                if (Module.FS.analyzePath(logPath).exists) {
+                    const logContent = Module.FS.readFile(logPath, { encoding: 'utf8' });
+                    console.log('\n--- luahblatex.log (last 100 lines) ---');
+                    const lines = logContent.split('\n');
+                    console.log(lines.slice(-100).join('\n'));
+                    console.log('--- end of log ---\n');
+                }
+                throw new Error(`Format file ${fmtFileName} was not created`);
             }
-            throw new Error(`Format file ${fmtFileName} was not created`);
+
+            console.log(`Format file ${fmtFileName} exists, reading...`);
+            const fmtFile = Module.FS.readFile(fmtFileName);
+
+            if (fmtFile.length < 1000) {
+                throw new Error(`Format file is too small (${fmtFile.length} bytes), likely invalid`);
+            }
+
+            const outputPath = path.join(fmtDir, fmtPath);
+            fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+            fs.writeFileSync(outputPath, fmtFile);
+
+            console.log(`✓ Successfully rebuilt ${fmtPath} (${fmtFile.length} bytes)`);
+
+        } catch (e) {
+            console.error(`✗ Failed to rebuild ${fmtPath}:`, e.message || e);
+            process.exit(1);
         }
-
-        console.log(`Format file ${fmtFileName} exists, reading...`);
-        const fmtFile = Module.FS.readFile(fmtFileName);
-
-        if (fmtFile.length < 1000) {
-            throw new Error(`Format file is too small (${fmtFile.length} bytes), likely invalid`);
-        }
-
-        const outputPath = path.join(fmtDir, fmtPath);
-        fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-        fs.writeFileSync(outputPath, fmtFile);
-
-        console.log(`✓ Successfully rebuilt ${fmtPath} (${fmtFile.length} bytes)`);
     }
 
     console.log('\n✓ All formats rebuilt successfully');

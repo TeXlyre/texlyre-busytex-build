@@ -223,10 +223,6 @@ source/texlive.txt source/expat.txt source/fontconfig.txt:
 	curl -L $(URL_$(notdir $(basename $@))) | tar -xzf - -C $(basename $@) --strip-components=1
 	find $(basename $@) > $@
 
-# source/texmfrepo.txt:
-# 	mkdir -p $(basename $@)
-# 	curl -L $(URL_texlive_full_iso_cache) | bsdtar -x -C $(basename $@)
-# 	find $(basename $@) > $@
 source/texmfrepo.txt:
 	mkdir -p $(basename $@)
 	@if [ ! -f source/texlive2026.iso ]; then \
@@ -503,10 +499,9 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	mkdir -p $(basename $@)/tlpkg/tlpobj
 	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@)/texmf-dist --exclude='tlpkg'; )
 	$(foreach name,$(shell ls source/texmfrepo/archive/hyphen-*.r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.'),tar -xJf $(name) -C $(basename $@) tlpkg; )
-    # Extract legacy hyphenation packages (russian/ukrainian)
-    $(foreach name,ruhyphen ukrhyph,$(if $(wildcard source/texmfrepo/archive/$(name).r*.tar.xz),tar -xJf $(shell ls source/texmfrepo/archive/$(name).r*.tar.xz | grep -v '\.source\.' | grep -v '\.doc\.' | head -1) -C $(basename $@)/texmf-dist --exclude='tlpkg'; ))
-	#
-    ls $(basename $@)/tlpkg/tlpobj/hyphen-german.tlpobj 2>/dev/null || echo "WARNING: tlpobj missing before generate"
+	# Patch to fix legacy hyphenation
+	#$(foreach name,ruhyphen ukrhyph,$(if $(wildcard source/texmfrepo/archive/$(name).r*.tar.xz),tar -xJf $(shell ls source/texmfrepo/archive/$(name).r*.tar.xz | grep -v '\.source\.' | grep -v '\.doc\.' | head -1) -C $(basename $@)/texmf-dist --exclude='tlpkg'; ))
+	ls $(basename $@)/tlpkg/tlpobj/hyphen-german.tlpobj 2>/dev/null || echo "WARNING: tlpobj missing before generate"
 	$(PERL) -I$(ROOT)/source/texmfrepo/tlpkg $(ROOT)/generate_language.pl \
 	  $(ROOT)/$(basename $@) \
 	  $(ROOT)/source/texmfrepo
@@ -547,7 +542,7 @@ build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt buil
 	printf '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir><cachedir>/texlive/fontconfig-cache</cachedir></fontconfig>' > build/etc-fonts/fonts.conf
 	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-$*/icudt78l.dat
 	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js.tmp --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive --preload build/etc-fonts@/etc/fonts
-	-$(NODE) rebuild_fmt_wasm.js $* build/texlive-$*/texmf-dist/texmf-var/web2c
+	$(NODE) rebuild_fmt_wasm.js $* build/texlive-$*/texmf-dist/texmf-var/web2c
 	@echo "Rebuilding data package with new format files..."
 	$(PYTHON) $(EMROOT)/tools/file_packager.py build/wasm/texlive-$*.data --js-output=build/wasm/texlive-$*.js --export-name=BusytexPipeline --lz4 --use-preload-cache --preload build/passwd@/etc/passwd --preload build/empty@/bin/busytex --preload build/texlive-$*@/texlive --preload build/etc-fonts@/etc/fonts
 	grep -r -I -h 'ProvidesPackage{' build/texlive-$* | grep '^[^%]' | sed -e 's/^/\/\/ /' > build/wasm/texlive-$*.js.providespackage.txt
@@ -634,6 +629,17 @@ wasm-all: wasm wasm-pdftex wasm-xetex
 
 ################################################################################################################
 
+.PHONY: wasm-postbuild-hyphenation-fmt
+wasm-postbuild-hyphenation-fmt:
+	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-basic/icudt78l.dat
+	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-extra/icudt78l.dat
+	$(MAKE) -B build/wasm/busytex.js
+	$(foreach profile,basic extra,$(foreach pkg,ruhyphen ukrhyph,archive=$$(ls source/texmfrepo/archive/$(pkg).r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.' | head -1); if [ -n "$$archive" ]; then echo "Extracting $$archive -> build/texlive-$(profile)/texmf-dist"; tar -xJf "$$archive" -C build/texlive-$(profile)/texmf-dist --exclude='tlpkg'; else echo "WARNING: no archive found for $(pkg)"; fi; ))
+	$(foreach profile,basic extra,mktexlsr build/texlive-$(profile)/texmf-dist; )
+	find build/texlive-basic -name "ruhyphen.tex"
+	rm -f build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
+	$(MAKE) build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
+
 .PHONY: ubuntu-wasm
 ubuntu-wasm: build/wasm/ubuntu/texlive-latex-extra.js build/wasm/ubuntu/texlive-base_texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended.js
 
@@ -663,6 +669,7 @@ smoke-native: build/native/busytex
 	-$(foreach applet,xelatex pdflatex luahblatex lualatex bibtex8 xdvipdfmx kpsewhich kpsestat kpseaccess kpsereadlink,echo $(BUSYTEX_native) $(applet) --version; $(BUSYTEX_native) $(applet) --version; )
 
 ################################################################################################################
+
 .PHONY: clean clean-tds clean-native clean-wasm clean_build clean-dist clean-example
 clean:
 	rm -rf build source
@@ -678,6 +685,7 @@ clean-dist:
 	rm -rf dist-*
 clean-example:
 	rm -rf example/*.aux example/*.bbl example/*.blg example/*.log example/*.xdv
+
 ################################################################################################################
 
 .PHONY: dist-wasm dist-native dist-native-full download-native
@@ -687,7 +695,8 @@ dist-wasm:
 	-cp build/wasm/texlive-basic.js build/wasm/texlive-basic.data $@ 
 	-cp build/wasm/texlive-extra.js build/wasm/texlive-extra.data $@
 	-cp build/wasm/texlive-basic.js.providespackage.txt build/wasm/texlive-extra.js.providespackage.txt $@
-	-cp build/wasm/ubuntu/*.js      build/wasm/ubuntu/*.data      $@ 
+	-cp web/busytex_pipeline.js		web/busytex_worker.js 		  $@
+	#-cp build/wasm/ubuntu/*.js      build/wasm/ubuntu/*.data      $@ 
 
 dist-native-full: build/native/busytex
 	mkdir -p $@
@@ -709,5 +718,4 @@ download-native:
 	-ln -s $(shell which pkgdata) build/native/texlive/libs/icu/icu-build/bin/
 	#-$(CC_native) source/texlive/libs/freetype2/freetype-src/src/tools/apinames.c -o build/native/texlive/libs/freetype2/ft-build/apinames
 	chmod +x $(addprefix build/native/texlive/texk/web2c/, $(BUSYTEX_TEXBIN)) $(addprefix build/native/texlive/texk/web2c/web2c/, $(BUSYTEX_WEB2CBIN))
-
 
