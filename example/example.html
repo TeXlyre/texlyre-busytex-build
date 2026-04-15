@@ -2,16 +2,13 @@
 
 <head>
     <title>busytex example</title>
-    <link rel="busytex" type="text/javascript" id="busytex_worker_js" href="/dist/busytex_worker.js" />
-    <link rel="busytex" type="text/javascript" id="busytex_pipeline_js" href="/dist/busytex_pipeline.js" />
-    <link rel="busytex" type="text/javascript" id="busytex_js" href="/dist/busytex.js" />
-    <link rel="busytex" type="application/wasm" id="busytex_wasm" href="/dist/busytex.wasm" />
-    <link rel="busytex" type="text/javascript" id="texlive_basic" href="/dist/texlive-basic.js" />
-    <link rel="busytex" type="text/javascript" id="texlive_ubuntu_science"
-        href="/dist/texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended.js" />
-    <link rel="busytex" type="text/javascript" id="texlive_ubuntu_recommended"
-        href="/dist/texlive-latex-recommended.js" />
-    <link rel="busytex" type="text/javascript" id="texlive_ubuntu_extra" href="/dist/texlive-latex-extra.js" />
+    <link rel="busytex" type="text/javascript" id="busytex_worker_js" href="/dist-wasm/busytex_worker.js" />
+    <link rel="busytex" type="text/javascript" id="busytex_pipeline_js" href="/dist-wasm/busytex_pipeline.js" />
+    <link rel="busytex" type="text/javascript" id="busytex_js" href="/dist-wasm/busytex.js" />
+    <link rel="busytex" type="application/wasm" id="busytex_wasm" href="/dist-wasm/busytex.wasm" />
+    <link rel="busytex" type="text/javascript" id="texlive_basic" href="/dist-wasm/texlive-basic.js" />
+    <link rel="busytex" type="text/javascript" id="texlive_recommended" href="/dist-wasm/texlive-recommended.js" />
+    <link rel="busytex" type="text/javascript" id="texlive_extra" href="/dist-wasm/texlive-extra.js" />
 </head>
 
 <body style="width: 100%; height: 100%; overflow: hidden">
@@ -25,6 +22,10 @@
         <label for="preload">Preload</label>
         <input type="checkbox" id="bibtex" name="bibtex" checked>
         <label for="bibtex">BibTeX</label>
+        <input type="checkbox" id="makeindex" name="makeindex" checked>
+        <label for="bibtex">MakeIndex</label>
+        <input type="checkbox" id="rerun" name="rerun" checked>
+        <label for="bibtex">Multiple Reruns</label>
         <select name="verbose" id="verbose">
             <option value="silent" selected>Verbosity: Almost Silent</option>
             <option value="info">Verbosity: Quite Talkative</option>
@@ -34,16 +35,13 @@
             <option value="xetex_bibtex8_dvipdfmx" selected>TeX Pipeline: XeTeX + bibtex8 + dvipdfmx</option>
             <option value="pdftex_bibtex8" selected>TeX Pipeline: PdfTeX + bibtex8</option>
             <option value="luahbtex_bibtex8">TeX Pipeline: LuaHBTeX + bibtex8</option>
-            <!-- <option value="luatex_bibtex8">TeX Pipeline: LuaTeX + bibtex8</option> -->
         </select>
         <input type="checkbox" id="checked_texlive_auto" name="checked_texlive_auto" checked>
         <label for="checked_texlive_auto">auto selection</label>
-        <input type="checkbox" id="checked_texlive_ubuntu_recommended" name="checked_texlive_ubuntu_recommended">
-        <label for="checked_texlive_ubuntu_recommended">texlive-latex-recommended</label>
-        <input type="checkbox" id="checked_texlive_ubuntu_extra" name="checked_texlive_ubuntu_extra">
-        <label for="checked_texlive_ubuntu_extra">texlive-latex-extra</label>
-        <input type="checkbox" id="checked_texlive_ubuntu_science" name="checked_texlive_ubuntu_science">
-        <label for="checked_texlive_ubuntu_science">texlive-science</label>
+        <input type="checkbox" id="checked_texlive_recommended" name="checked_texlive_recommended">
+        <label for="checked_texlive_recommended">texlive-latex-recommended</label>
+        <input type="checkbox" id="checked_texlive_extra" name="checked_texlive_extra">
+        <label for="checked_texlive_extra">texlive-latex-extra</label>
     </div>
     <div><iframe style="width: 98%; height:25%" id="preview"></iframe></div>
 
@@ -86,15 +84,17 @@ Blablabla said Nobody ~\cite{Nobody06}.
             const use_verbose = document.getElementById('verbose').value;
             const use_driver = document.getElementById('tex_driver').value;
             const use_bibtex = document.getElementById('bibtex').checked;
+            const use_makeindex = document.getElementById('makeindex').checked;
+            const use_rerun = document.getElementById('rerun').checked;
             const use_auto = document.getElementById('checked_texlive_auto').checked;
 
             let data_packages_js = null;
             if (!use_auto) {
                 data_packages_js = [];
-                for (const ubuntu_package_name of ['texlive_ubuntu_recommended', 'texlive_ubuntu_extra', 'texlive_ubuntu_science']) {
-                    const checked = document.getElementById('checked_' + ubuntu_package_name).checked;
+                for (const texlive_package_name of ['texlive_recommended', 'texlive_extra']) {
+                    const checked = document.getElementById('checked_' + texlive_package_name).checked;
                     if (checked)
-                        data_packages_js.push(texlive_data_packages_js.find(path => path.includes(ubuntu_package_name)));
+                        data_packages_js.push(texlive_data_packages_js.find(path => path.includes(texlive_package_name)));
                 }
             }
 
@@ -104,32 +104,33 @@ Blablabla said Nobody ~\cite{Nobody06}.
             if (use_worker) {
                 if (reload)
                     worker = new Worker(paths.busytex_worker_js);
-            }
-            else if (reload) {
-                worker =
-                {
-                    async postMessage({ files, main_tex_path, bibtex, preload, verbose, busytex_js, busytex_wasm, texmf_local, preload_data_packages_js, data_packages_js }) {
+            } else if (reload) {
+                worker = {
+                    async postMessage({ files, main_tex_path, bibtex, makeindex, rerun, preload, verbose, busytex_js, busytex_wasm, texmf_local, preload_data_packages_js, data_packages_js, driver }) {
                         if (busytex_wasm && busytex_js && preload_data_packages_js) {
-                            this.pipeline = new Promise(function (resolve, reject) {
-                                let s = document.createElement('script');
-                                s.src = busytex_pipeline_js;
-                                s.onload = resolve;
-                                s.onerror = reject;
-                                self.document.head.appendChild(s);
-                            }).then(_ => Promise.resolve(new BusytexPipeline(busytex_js, busytex_wasm, data_packages_js, preload_data_packages_js, texmf_local, msg => this.onmessage({ data: { log: msg } }), preload, BusytexPipeline.ScriptLoaderDefault)));
-                        }
-
-                        else if (files && this.pipeline) {
+                            this._init = { busytex_js, busytex_wasm, data_packages_js, preload_data_packages_js, texmf_local, preload };
+                        } else if (files && this._init) {
+                            const { busytex_js, busytex_wasm, data_packages_js: init_data_packages_js, preload_data_packages_js, texmf_local, preload } = this._init;
+                            const w = this;
+                            if (!this.pipeline) {
+                                this.pipeline = new Promise(function (resolve, reject) {
+                                    let s = document.createElement('script');
+                                    s.src = paths.busytex_pipeline_js;
+                                    s.onload = resolve;
+                                    s.onerror = reject;
+                                    document.head.appendChild(s);
+                                }).then(_ => new BusytexPipeline(busytex_js, busytex_wasm, init_data_packages_js, preload_data_packages_js, texmf_local, msg => w.onmessage({ data: { log: msg } }), () => { }, preload, BusytexPipeline.ScriptLoaderDocument));
+                            }
                             const pipeline = await this.pipeline;
-                            const pdf = await self.pipeline.compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js)
-                            this.onmessage({ data: { pdf: pdf } });
+                            const result = await pipeline.compile(files, main_tex_path, bibtex, makeindex, rerun, verbose, driver, data_packages_js);
+                            w.onmessage({ data: result });
                         }
                     },
 
                     terminate() {
                         this.onmessage({ data: { log: 'Terminating dummy worker' } });
                     }
-                }
+                };
             }
 
             worker.onmessage = ({ data: { pdf, synctex, log, print } }) => {
@@ -161,8 +162,7 @@ Blablabla said Nobody ~\cite{Nobody06}.
                         statusElement.scrollTop = statusElement.scrollHeight;
                     }
                 }
-            }
-
+            };
 
             if (reload)
                 worker.postMessage({ ...paths, texmf_local: texmf_local, preload_data_packages_js: paths.texlive_data_packages_js.slice(0, 1), data_packages_js: paths.texlive_data_packages_js });
@@ -170,7 +170,7 @@ Blablabla said Nobody ~\cite{Nobody06}.
             tic = performance.now();
             const tex = document.getElementById('tex').value, bib = document.getElementById('bib').value;
             const files = [{ path: 'example.tex', contents: tex }, { path: 'example.bib', contents: bib }];
-            worker.postMessage({ files: files, main_tex_path: 'example.tex', verbose: use_verbose, bibtex: use_bibtex, driver: use_driver, data_packages_js: data_packages_js });
+            worker.postMessage({ files: files, main_tex_path: 'example.tex', verbose: use_verbose, bibtex: use_bibtex, makeindex: use_makeindex, rerun: use_rerun, driver: use_driver, data_packages_js: data_packages_js });
         }
 
         function terminate() {
