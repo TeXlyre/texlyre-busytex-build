@@ -102,7 +102,7 @@ sh example/example.sh
 make build/wasm/texlive-basic.js
 make build/wasm/texlive-extra.js
 
-# Post-Process wasm hyphenation
+# Post-Process WASM hyphenation and XeTeX patch
 make wasm-postbuild-hyphenation-fmt
 
 # Distribution bundles
