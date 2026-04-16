@@ -1,7 +1,3 @@
-//TODO: what happens if creating another pipeline (waiting data error?)
-//TODO: put texlive into /opt/texlive/2020 or ~/.texlive2020?
-//TODO: configure fontconfig to use /etc/fonts
-
 /*
 xdvipdfmx:warning: Color stack underflow. Just ignore.
 xdvipdfmx:warning: Color stack underflow. Just ignore.
@@ -63,11 +59,6 @@ class BusytexDataPackageResolver {
     }
 
     extract_tex_package_name(path, contents = '') {
-        // implicitly excludes /.../temxf-dist/{fonts,bibtex}
-        // cat urls.txt | while read URL; do echo $(curl -sI ${URL%$'\r'} | head -n 1 | cut -d' ' -f2) $URL; done | grep 404 | sort | uniq
-
-        // https://ctan.org/tex-archive/macros/latex/required/graphics, graphicx
-
         const splitrootdir = path => { const splitted = path.split('/'); return [splitted[0], splitted.slice(1).join('/')]; };
 
         if (!path.endsWith('.sty'))
@@ -142,7 +133,6 @@ class BusytexDataPackageResolver {
 class BusytexBibtexResolver {
     resolve(files, bib_tex_commands = ['\\bibliography', '\\printbibliography']) {
         return files.some(f => f.path.endsWith('.tex') && typeof (f.contents) == 'string' && bib_tex_commands.some(b => f.contents.includes(b)));
-        // files.some(({path, contents}) => contents != null && path.endsWith('.bib'));
     }
 }
 
@@ -152,14 +142,12 @@ class BusytexPipeline {
     static VerboseInfo = 'info';
     static VerboseDebug = 'debug';
 
-    //FIXME begin: have to do static to execute LZ4 data packages: https://github.com/emscripten-core/emscripten/issues/12347
     static preRun = [];
     static calledRun = false;
     static data_packages = [];
     static locateFile(remote_package_name) {
         return BusytexPipeline.data_packages.map(data_package_js => data_package_js.replace('.js', '.data')).find(data_file => data_file.endsWith(remote_package_name));
     }
-    //FIXME end
 
     static ScriptLoaderDocument(src) {
         return new Promise((resolve, reject) => {
@@ -248,6 +236,17 @@ class BusytexPipeline {
 
         this.error_messages_fatal = ['Fatal error occurred', 'That was a fatal error', ':fatal:', '! Undefined control sequence.', 'undefined old font command'];
         this.error_messages_all = this.error_messages_fatal.concat(['no output PDF file produced', 'No pages of output.']);
+
+        this.rerun_patterns = [
+            'Rerun to get',
+            'Rerun LaTeX',
+            'rerunfilecheck',
+            'Label(s) may have changed',
+            'There were undefined references',
+            'run LaTeX again',
+        ];
+
+        this.max_tex_passes = 5;
 
         this.env = {
             TEXMFDIST: this.dir_texmfdist,
@@ -411,13 +410,52 @@ class BusytexPipeline {
         if (report_applet_versions) {
             const applets = initialized_module.callMainWithRedirects().stdout.split('\n').filter(line => line.length > 0);
             initialized_module.applet_versions = Object.fromEntries(applets.map(applet => ([applet, applet != 'makeindex' ? initialized_module.callMainWithRedirects([applet, '--version']).stdout : 'makeindex does not support --version'])));
-            // TODO: exception here not caught?
             this.on_initialized(initialized_module.applet_versions);
         }
         else
             initialized_module.applet_versions = {};
 
         return initialized_module;
+    }
+
+    _needs_rerun(log_text) {
+        return this.rerun_patterns.some(p => log_text.includes(p));
+    }
+
+    _run_cmd(Module, FS, cmd, error_messages, verbose, log_path, blg_path, aux_path, bbl_path, mem_header, logs) {
+        const is_bibtex = cmd[0].startsWith('bibtex');
+        const cmd_log_path = is_bibtex ? blg_path : log_path;
+        const cmd_aux_path = is_bibtex ? bbl_path : aux_path;
+
+        this.remove(FS, this.texmflog);
+        this.remove(FS, this.missfontlog);
+        this.remove(FS, cmd_log_path);
+
+        this.print('$ busytex ' + cmd.join(' '));
+        const { exit_code, stdout, stderr } = Module.callMainWithRedirects([...cmd], verbose != BusytexPipeline.VerboseSilent);
+
+        Module.HEAPU8.fill(0);
+        Module.HEAPU8.set(mem_header);
+
+        this.print('$ echo $?');
+        this.print(`${exit_code}\n`);
+
+        const aux = this.read_all_text(FS, cmd_aux_path);
+        const log = this.read_all_text(FS, cmd_log_path);
+        const effective_exit_code = stdout.trim() ? (error_messages.some(err => stdout.includes(err)) ? exit_code : 0) : exit_code;
+
+        logs.push({
+            cmd: cmd.join(' '),
+            texmflog: (verbose == BusytexPipeline.VerboseInfo || verbose == BusytexPipeline.VerboseDebug) ? this.read_all_text(FS, this.texmflog) : '',
+            missfontlog: (verbose == BusytexPipeline.VerboseInfo || verbose == BusytexPipeline.VerboseDebug) ? this.read_all_text(FS, this.missfontlog) : '',
+            log: log.trim(),
+            aux: aux.trim(),
+            stdout: stdout.trim(),
+            stderr: stderr.trim(),
+            exit_code: effective_exit_code
+        });
+
+        return { exit_code: effective_exit_code, log };
     }
 
     async compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js = [], remote_endpoint = 'http://localhost:8070') {
@@ -451,9 +489,6 @@ class BusytexPipeline {
         this.print('Data packages used: ' + fmt_packages_list(data_packages_js));
 
         if (tex_packages_not_resolved.length > 0) {
-            // TODO: replace by regular return? override? 
-            // throw new Error('Not resolved TeX packages: ' + tex_packages_not_resolved.join(', '));
-
             data_packages_js = this.data_package_resolver.data_packages_js;
             this.print('Because of unresolved TeX packages, enabling all available data packages: ' + data_packages_js.sort().toString());
         }
@@ -471,19 +506,26 @@ class BusytexPipeline {
 
         const [xdv_path, pdf_path, log_path, aux_path, blg_path, bbl_path] = ['.xdv', '.pdf', '.log', '.aux', '.blg', '.bbl'].map(ext => tex_path.replace('.tex', ext));
 
-        const xetex = ['xelatex', '-synctex=1', '--no-shell-escape', '--interaction=batchmode', '--halt-on-error', '--no-pdf', '--fmt', this.fmt.xetex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).xetex);
-        const pdftex = ['pdflatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.pdftex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).pdftex);
-        const pdftex_not_final = ['pdflatex', '-synctex=1', '--no-shell-escape', '--interaction=batchmode', '--halt-on-error', '--fmt', this.fmt.pdftex, tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).pdftex);
+        const verbose_args_for = key => (this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent])[key];
 
-        const luahbtex = ['luahblatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luahbtex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
-        const luahbtex_not_final = ['luahblatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--fmt', this.fmt.luahbtex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
+        const xetex_cmd = ['xelatex', '-synctex=1', '--no-shell-escape', '--interaction=batchmode', '--halt-on-error', '--no-pdf', '--fmt', this.fmt.xetex, tex_path].concat(verbose_args_for('xetex'));
+        const pdftex_final = ['pdflatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.pdftex, tex_path].concat(verbose_args_for('pdftex'));
+        const pdftex_nonfinal = ['pdflatex', '-synctex=1', '--no-shell-escape', '--interaction=batchmode', '--halt-on-error', '--fmt', this.fmt.pdftex, tex_path].concat(verbose_args_for('pdftex'));
+        const luahbtex_final = ['luahblatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luahbtex, '--nosocket', tex_path].concat(verbose_args_for('luahbtex'));
+        const luahbtex_nonfinal = ['luahblatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--fmt', this.fmt.luahbtex, '--nosocket', tex_path].concat(verbose_args_for('luahbtex'));
+        const luatex_final = ['lualatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat(verbose_args_for('luahbtex'));
+        const luatex_nonfinal = ['lualatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat(verbose_args_for('luahbtex'));
+        const bibtex8_cmd = ['bibtex8', '--8bit'].concat(verbose_args_for('bibtex8')).concat([aux_path]);
+        const xdvipdfmx_cmd = ['xdvipdfmx'].concat(verbose_args_for('xdvipdfmx')).concat(['-o', pdf_path, xdv_path]);
 
-        const luatex = ['lualatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
-        const luatex_not_final = ['lualatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).luahbtex);
+        const driver_cmds = {
+            xetex_bibtex8_dvipdfmx: { initial: xetex_cmd, nonfinal: xetex_cmd, final: xetex_cmd, dvi: xdvipdfmx_cmd },
+            pdftex_bibtex8: { initial: pdftex_nonfinal, nonfinal: pdftex_nonfinal, final: pdftex_final, dvi: null },
+            luahbtex_bibtex8: { initial: luahbtex_nonfinal, nonfinal: luahbtex_nonfinal, final: luahbtex_final, dvi: null },
+            luatex_bibtex8: { initial: luatex_final, nonfinal: luatex_nonfinal, final: luatex_final, dvi: null },
+        };
 
-        const bibtex8 = ['bibtex8', '--8bit'].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).bibtex8).concat([aux_path]);
-
-        const xdvipdfmx = ['xdvipdfmx'].concat((this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent]).xdvipdfmx).concat(['-o', pdf_path, xdv_path]);
+        const { initial, nonfinal, final: final_cmd, dvi } = driver_cmds[driver];
 
         if (FS.analyzePath(this.project_dir).object.mount.mountpoint == this.project_dir)
             FS.unmount(this.project_dir);
@@ -503,110 +545,56 @@ class BusytexPipeline {
         const source_dir = PATH.join(this.project_dir, dirname);
         FS.chdir(source_dir);
 
-        let cmds = [];
-        if (driver == 'xetex_bibtex8_dvipdfmx') {
-            cmds = bibtex ?
-                [
-                    [xetex, this.error_messages_fatal, false],
-                    [bibtex8, this.error_messages_fatal, true],
-                    [xetex, this.error_messages_fatal, true],
-                    [xetex, this.error_messages_all, true],
-                    [xdvipdfmx, this.error_messages_all, false]
-                ] :
-                [
-                    [xetex, this.error_messages_all, false],
-                    [xdvipdfmx, this.error_messages_all, false]
-                ];
-        }
-        else if (driver == 'pdftex_bibtex8') {
-            cmds = bibtex ?
-                [
-                    [pdftex_not_final, this.error_messages_fatal, false],
-                    [bibtex8, this.error_messages_fatal, true],
-                    [pdftex_not_final, this.error_messages_fatal, true],
-                    [pdftex, this.error_messages_all, false],
-                    [pdftex_not_final, this.error_messages_fatal, true],
-                    [pdftex, this.error_messages_all, false]
-                ] :
-                [
-                    [pdftex, this.error_messages_all]
-                ];
-        }
-        else if (driver == 'luahbtex_bibtex8') {
-            cmds = bibtex ?
-                [
-                    [luahbtex_not_final, this.error_messages_fatal, false],
-                    [bibtex8, this.error_messages_fatal, true],
-                    [luahbtex_not_final, this.error_messages_fatal, true],
-                    [luahbtex, this.error_messages_all, false],
-                    [luahbtex_not_final, this.error_messages_fatal, true],
-                    [luahbtex, this.error_messages_all, false]
-
-                ] :
-                [
-                    [luahbtex, this.error_messages_all, false]
-                ];
-        }
-        else if (driver == 'luatex_bibtex8') {
-            cmds = bibtex ?
-                [
-                    [luatex, this.error_messages_fatal, false],
-                    [bibtex8, this.error_messages_fatal, true],
-                    [luatex, this.error_messages_fatal, true],
-                    [luatex, this.error_messages_all, false]
-                ] :
-                [
-                    [luatex, this.error_messages_all, false]
-                ];
-        }
-
-        let exit_code = 0, stdout = '', stderr = '', log = '', aux = '';
-        let skip = false;
         const mem_header = Uint8Array.from(Module.HEAPU8.slice(0, this.mem_header_size));
         const logs = [];
-        for (const [cmd, error_messages, can_skip] of cmds) {
-            if (can_skip && skip)
-                continue;
 
-            const is_bibtex = cmd[0].startsWith('bibtex');
-            const cmd_log_path = is_bibtex ? blg_path : log_path;
-            const cmd_aux_path = is_bibtex ? bbl_path : aux_path;
+        const run = (cmd, error_messages) =>
+            this._run_cmd(Module, FS, cmd, error_messages, verbose, log_path, blg_path, aux_path, bbl_path, mem_header, logs);
 
-            this.remove(FS, this.texmflog);
-            this.remove(FS, this.missfontlog);
-            this.remove(FS, cmd_log_path);
+        let exit_code = 0;
+        let last_log = '';
 
-            this.print('$ busytex ' + cmd.join(' '));
-            ({ exit_code, stdout, stderr } = Module.callMainWithRedirects([...cmd], verbose != BusytexPipeline.VerboseSilent));
+        ({ exit_code, log: last_log } = run(initial, this.error_messages_fatal));
 
-            Module.HEAPU8.fill(0);
-            Module.HEAPU8.set(mem_header);
+        if (exit_code == 0 && bibtex) {
+            ({ exit_code } = run(bibtex8_cmd, this.error_messages_fatal));
 
-            this.print('$ echo $?');
-            this.print(`${exit_code}\n`);
-
-            if (is_bibtex && this.read_all_text(FS, bbl_path).trim() == '' && (exit_code == 0 || exit_code == 2)) {
-                skip = true;
-                this.print('$ # bibtex found no citation commands, skipping extra calls');
+            if (exit_code == 0 && this.read_all_text(FS, bbl_path).trim() == '') {
+                this.print('$ # bibtex found no citation commands, skipping extra passes');
+                bibtex = false;
             }
+        }
 
-            aux = this.read_all_text(FS, cmd_aux_path);
-            log = this.read_all_text(FS, cmd_log_path);
-            exit_code = stdout.trim() ? (error_messages.some(err => stdout.includes(err)) ? exit_code : 0) : exit_code;
+        if (exit_code == 0) {
+            for (let pass = 0; pass < this.max_tex_passes; pass++) {
+                const is_last_pass = pass === this.max_tex_passes - 1;
+                const cmd = is_last_pass ? final_cmd : nonfinal;
+                const error_messages = is_last_pass ? this.error_messages_all : this.error_messages_fatal;
 
-            logs.push({
-                cmd: cmd.join(' '),
-                texmflog: (verbose == BusytexPipeline.VerboseInfo || verbose == BusytexPipeline.VerboseDebug) ? this.read_all_text(FS, this.texmflog) : '',
-                missfontlog: (verbose == BusytexPipeline.VerboseInfo || verbose == BusytexPipeline.VerboseDebug) ? this.read_all_text(FS, this.missfontlog) : '',
-                log: log.trim(),
-                aux: aux.trim(),
-                stdout: stdout.trim(),
-                stderr: stderr.trim(),
-                exit_code: exit_code
-            });
+                ({ exit_code, log: last_log } = run(cmd, error_messages));
 
-            if (exit_code != 0)
-                break;
+                if (exit_code != 0)
+                    break;
+
+                if (!this._needs_rerun(last_log)) {
+                    if (cmd !== final_cmd) {
+                        ({ exit_code, log: last_log } = run(final_cmd, this.error_messages_all));
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (exit_code == 0 && dvi) {
+            ({ exit_code } = run(dvi, this.error_messages_all));
+        }
+
+        // Clear intermediate TeX pass logs; retain bibtex, dvipdfmx, and the final TeX pass.
+        const is_tex_log = entry => !entry.cmd.startsWith('bibtex') && !entry.cmd.startsWith('xdvipdfmx');
+        const last_tex_idx = logs.reduce((acc, entry, i) => is_tex_log(entry) ? i : acc, -1);
+        for (let i = 0; i < logs.length; i++) {
+            if (is_tex_log(logs[i]) && i !== last_tex_idx)
+                logs[i].log = '';
         }
 
         console.log('LOGS', logs);
