@@ -59,6 +59,11 @@ class BusytexDataPackageResolver {
     }
 
     extract_tex_package_name(path, contents = '') {
+        // implicitly excludes /.../temxf-dist/{fonts,bibtex}
+        // cat urls.txt | while read URL; do echo $(curl -sI ${URL%$'\r'} | head -n 1 | cut -d' ' -f2) $URL; done | grep 404 | sort | uniq
+
+        // https://ctan.org/tex-archive/macros/latex/required/graphics, graphicx
+
         const splitrootdir = path => { const splitted = path.split('/'); return [splitted[0], splitted.slice(1).join('/')]; };
 
         if (!path.endsWith('.sty'))
@@ -133,6 +138,7 @@ class BusytexDataPackageResolver {
 class BusytexBibtexResolver {
     resolve(files, bib_tex_commands = ['\\bibliography', '\\printbibliography']) {
         return files.some(f => f.path.endsWith('.tex') && typeof (f.contents) == 'string' && bib_tex_commands.some(b => f.contents.includes(b)));
+        // files.some(({path, contents}) => contents != null && path.endsWith('.bib'));
     }
 }
 
@@ -142,12 +148,14 @@ class BusytexPipeline {
     static VerboseInfo = 'info';
     static VerboseDebug = 'debug';
 
+    //FIXME begin: have to do static to execute LZ4 data packages: https://github.com/emscripten-core/emscripten/issues/12347
     static preRun = [];
     static calledRun = false;
     static data_packages = [];
     static locateFile(remote_package_name) {
         return BusytexPipeline.data_packages.map(data_package_js => data_package_js.replace('.js', '.data')).find(data_file => data_file.endsWith(remote_package_name));
     }
+    //FIXME end
 
     static ScriptLoaderDocument(src) {
         return new Promise((resolve, reject) => {
@@ -203,7 +211,7 @@ class BusytexPipeline {
         this.dir_cnf = '/texlive/texmf-dist/web2c';
         this.dir_fontconfig = '/texlive';//'/etc/fonts';
         this.texmflog = '/tmp/texmf.log';
-        this.missfontlog = 'missfont.log'; // http://tug.ctan.org/info/tex-font-errors-cheatsheet/tex-font-cheatsheet.pdf 
+        this.missfontlog = 'missfont.log'; // http://tug.ctan.org/info/tex-font-errors-cheatsheet/tex-font-cheatsheet.pdf
 
         this.verbose_args =
         {
@@ -263,11 +271,12 @@ class BusytexPipeline {
         this.read_all_text = (FS, log_path) => FS.analyzePath(log_path).exists ? FS.readFile(log_path, { encoding: 'utf8' }).trim() : '';
         this.read_all_bytes = (FS, pdf_path) => FS.analyzePath(pdf_path).exists ? FS.readFile(pdf_path, { encoding: 'binary' }) : new Uint8Array();
         this.mkdir_p = (FS, PATH, dirpath, dirs = new Set()) => {
-            if (!dirs.has(dirpath)) {
-                this.mkdir_p(FS, PATH, PATH.dirname(dirpath), dirs);
+            if (!dirpath || dirpath === '/' || dirs.has(dirpath))
+                return;
+            this.mkdir_p(FS, PATH, PATH.dirname(dirpath), dirs);
+            if (!FS.analyzePath(dirpath).exists)
                 FS.mkdir(dirpath);
-                dirs.add(dirpath);
-            }
+            dirs.add(dirpath);
         };
 
         this.bibtex_resolver = new BusytexBibtexResolver();
@@ -410,6 +419,7 @@ class BusytexPipeline {
         if (report_applet_versions) {
             const applets = initialized_module.callMainWithRedirects().stdout.split('\n').filter(line => line.length > 0);
             initialized_module.applet_versions = Object.fromEntries(applets.map(applet => ([applet, applet != 'makeindex' ? initialized_module.callMainWithRedirects([applet, '--version']).stdout : 'makeindex does not support --version'])));
+            // TODO: exception here not caught?
             this.on_initialized(initialized_module.applet_versions);
         }
         else
@@ -458,6 +468,43 @@ class BusytexPipeline {
         return { exit_code: effective_exit_code, log };
     }
 
+    async read_project_files(dir = null) {
+        const Module = await this.Module;
+        if (!Module) return [];
+        const { FS, PATH } = Module;
+        const root = dir || this.project_dir;
+        const results = [];
+        const walk = dir => {
+            for (const name of FS.readdir(dir)) {
+                if (name === '.' || name === '..') continue;
+                const full = PATH.join(dir, name);
+                const stat = FS.stat(full);
+                if (FS.isDir(stat.mode)) {
+                    walk(full);
+                } else {
+                    results.push({ path: full.slice(root.length + 1), contents: this.read_all_bytes(FS, full) });
+                }
+            }
+        };
+        if (FS.analyzePath(root).exists)
+            walk(root);
+        return results;
+    }
+
+    async write_texlive_remote_files(files) {
+        const Module = await this.Module;
+        if (!Module) throw new Error('Module not initialized');
+        const { FS, PATH } = Module;
+        const remote_dir = '/tmp/texlive_remote';
+        if (!FS.analyzePath(remote_dir).exists)
+            FS.mkdir(remote_dir);
+        for (const { path, contents } of files) {
+            const absolute = PATH.join(remote_dir, path);
+            this.mkdir_p(FS, PATH, PATH.dirname(absolute), new Set());
+            FS.writeFile(absolute, contents);
+        }
+    }
+
     async compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js = [], remote_endpoint = 'http://localhost:8070') {
         if (!this.supported_drivers.includes(driver))
             throw new Error(`Driver [${driver}] is not supported, only [${this.supported_drivers}] are supported`);
@@ -489,6 +536,9 @@ class BusytexPipeline {
         this.print('Data packages used: ' + fmt_packages_list(data_packages_js));
 
         if (tex_packages_not_resolved.length > 0) {
+            // TODO: replace by regular return? override?
+            // throw new Error('Not resolved TeX packages: ' + tex_packages_not_resolved.join(', '));
+
             data_packages_js = this.data_package_resolver.data_packages_js;
             this.print('Because of unresolved TeX packages, enabling all available data packages: ' + data_packages_js.sort().toString());
         }
