@@ -1,6 +1,11 @@
 # TeXlyre-BusyTeX
 
-TeX Live 2026 compiled into a single fully static binary (x86\_64-linux) and a WebAssembly module, based on [busytex](https://github.com/busytex/busytex).
+TeX Live 2026 compiled into a single fully static binary (x86\_64-linux) and a WebAssembly module, based on [busytex](https://github.com/busytex/busytex). 
+
+The corresponding WASM API for this build can be found at [texlyre-busytex](https://github.com/TeXlyre/texlyre-busytex)
+
+To run the server, refer to the [texlive-server instructions](/texlive-server/README.md)
+
 
 Bundled engines and tools:
 
@@ -10,10 +15,6 @@ Bundled engines and tools:
 
 Supported targets: `x86\_64-linux` (static, musl) and `wasm32`.
 
-## License
-
-AGPL-3.0-or-later. Based on [busytex](https://github.com/busytex/busytex) (MIT). See [LICENSE](LICENSE) and [NOTICE](NOTICE).
-
 ## Usage
 
 ### WASM (browser)
@@ -22,13 +23,11 @@ Download the latest release assets and serve the example:
 
 ```shell
 mkdir -p dist
-wget -P dist --backups=1 $(printf "https://github.com/busytex/busytex/releases/latest/download/%s " \\
+wget -P dist --backups=1 $(printf "https://github.com/TeXlyre/texlyre-busytex-build/releases/latest/download/%s " \\
   busytex\_pipeline.js busytex\_worker.js \\
   busytex.wasm busytex.js \\
   texlive-basic.js texlive-basic.data \\
-  ubuntu-texlive-latex-extra.data ubuntu-texlive-latex-extra.js \\
-  ubuntu-texlive-latex-recommended.data ubuntu-texlive-latex-recommended.js \\
-  ubuntu-texlive-science.data ubuntu-texlive-science.js)
+  texlive-extra.js texlive-extra.data)
 
 python3 example/example.py
 ```
@@ -85,7 +84,7 @@ make source/texlive.txt build/versions.txt
 # Native tools and binaries
 make native
 
-# Smoke test
+# Smoke test native
 make smoke-native
 
 # TeX Live tree
@@ -95,15 +94,15 @@ make build/texlive-basic.txt build/texlive-extra.txt build/texlive-full.txt
 # WASM build
 make wasm
 
-# End-to-end example
-sh example/example.sh
-
 # TeX Live data packages
 make build/wasm/texlive-basic.js
 make build/wasm/texlive-extra.js
 
-# Post-Process WASM hyphenation and XeTeX patch
+# Post-process WASM hyphenation and XeTeX patch
 make wasm-postbuild-hyphenation-fmt
+
+# Smoke test WASM
+make smoke-wasm
 
 # Distribution bundles
 make dist-native dist-wasm
@@ -145,29 +144,13 @@ Open http://localhost:8183/example/example.html. To test a freshly built WASM bu
 * Biber (perl)
 * mktexlsr, fmtutil, updmap (perl)
 
-## Help wanted
+## License
 
-* Single-page HTML5 offline webapp ([html5doctor](https://diveinto.html5doctor.com/offline.html))
-* Refactor Emscripten data-packages subsystem ([issue #14385](https://github.com/emscripten-core/emscripten/issues/14385))
-* LLVM localize-globals in WASM objects ([bug 51279](https://bugs.llvm.org/show_bug.cgi?id=51279))
-* Upstream build-sequence changes to TeX Live ([tlbuild thread](https://tug.org/pipermail/tlbuild/2021q1/004806.html))
-* Assorted Emscripten improvements ([#12093](https://github.com/emscripten-core/emscripten/issues/12093), [#12256](https://github.com/emscripten-core/emscripten/issues/12256), [#13466](https://github.com/emscripten-core/emscripten/issues/13466), [#13219](https://github.com/emscripten-core/emscripten/issues/13219))
-* Better WASM init error surfacing ([#14777](https://github.com/emscripten-core/emscripten/issues/14777))
-* Explore `DLLPROC` as an alternative to redefining `main` symbols
-* Biber on WASM ([biber #338](https://github.com/plk/biber/issues/338), [buildbiber](https://github.com/busytex/buildbiber))
-* Audit shipped TeX Live packages to reduce footprint (fonts, fontmaps, hyphenation)
-* Binary size reduction / stripping
-* Build x86\_64-linux-glibc with clang to match the WASM toolchain
-* GitHub Actions test for x86\_64 binaries on WSLv1
-* Trim Makefile build sequence
-* Node.js tests for WASM binaries and data-package preloading
-* Preloaded single-file, single-engine minimal builds (WASM + native) with basic LaTeX
-* Virtual / `LD\_PRELOAD`-based filesystems to avoid ISO/ZIP unpacking and embed TeX packages in native builds
-* Static Perl embedding for `fmtutil.pl`, `updmap.pl` ([perlembed](https://perldoc.perl.org/perlembed), [extending/embedding guide](http://www.kaiyuanba.cn/content/develop/Perl/Extending_And_Embedding_Perl.pdf))
-* Pre-parse `ProvidesPackage` metadata for data packages
+AGPL-3.0-or-later. Based on [busytex](https://github.com/busytex/busytex) (MIT). See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 ## References
 
+* [busytex](https://github.com/busytex/busytex)
 * [busytex (pdftex and xetex) TL2025 update](https://github.com/SiglumProject/busytex)
 * [pdftex.js](https://github.com/dmonad/pdftex.js)
 * [xetex.js](https://github.com/lyze/xetex-js)

@@ -55,9 +55,9 @@ jobs:
             make build/wasm/texlive-basic.js
             make -e TEXMFFULL=build/texlive-full $(printf "build/wasm/ubuntu/%s.js " $UBUNTUPACKAGES)
             make dist-wasm
-            
+
       - name: Smoke test WASM build
-        run: bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js
+        run: make smoke-wasm
 
       - name: Create Release
         env:

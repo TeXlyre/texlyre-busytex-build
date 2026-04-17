@@ -668,6 +668,10 @@ smoke-native: build/native/busytex
 	$(BUSYTEX_native)
 	-$(foreach applet,xelatex pdflatex luahblatex lualatex bibtex8 xdvipdfmx kpsewhich kpsestat kpseaccess kpsereadlink,echo $(BUSYTEX_native) $(applet) --version; $(BUSYTEX_native) $(applet) --version; )
 
+.PHONY: smoke-wasm
+smoke-wasm: build/wasm/busytex.js build/wasm/texlive-basic.js
+	bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js
+	
 ################################################################################################################
 
 .PHONY: clean clean-tds clean-native clean-wasm clean_build clean-dist clean-example
