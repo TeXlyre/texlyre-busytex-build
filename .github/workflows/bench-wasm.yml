@@ -9,6 +9,11 @@ on:
       busytexnativereleasetag:
         description: 'busytex native release tag (for building texlive-full)'
         required: true
+      privaterepo:
+        description: 'Use authenticated download (required for private repos)'
+        type: boolean
+        required: false
+        default: false
 
 env:
   BENCHSETURLS: >-
@@ -17,10 +22,11 @@ env:
     https://github.com/busytex/busytex/releases/download/busytexbenchset/arXiv_src_2302_001.tar
     https://github.com/busytex/busytex/releases/download/busytexbenchset/arXiv_src_2402_001.tar
   BENCHSETTARS: arXiv_src_1702_001.tar arXiv_src_2202_001.tar arXiv_src_2302_001.tar arXiv_src_2402_001.tar
+  MAKE_PARALLELISM: -j4
 
 jobs:
   bench-wasm:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -33,17 +39,38 @@ jobs:
         run: pip install flask flask-cors redis gevent --break-system-packages
 
       - name: Download WASM assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexwasmreleasetag }}
           mkdir -p dist-wasm
-          for f in busytex.js busytex.wasm texlive-basic.js texlive-basic.data; do
-            wget -P dist-wasm "$BASE/$f"
-          done
+          if [ "${{ github.event.inputs.privaterepo }}" = "true" ]; then
+            gh release download ${{ github.event.inputs.busytexwasmreleasetag }} \
+              --repo $GITHUB_REPOSITORY \
+              --pattern "busytex.js" \
+              --pattern "busytex.wasm" \
+              --pattern "texlive-basic.js" \
+              --pattern "texlive-basic.data" \
+              --dir dist-wasm
+          else
+            BASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexwasmreleasetag }}
+            for f in busytex.js busytex.wasm texlive-basic.js texlive-basic.data; do
+              wget -P dist-wasm "$BASE/$f"
+            done
+          fi
 
       - name: Download native binaries
-        run: make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexnativereleasetag }} download-native
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.privaterepo }}" = "true" ]; then
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexnativereleasetag }} download-native-auth
+          else
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexnativereleasetag }} download-native
+          fi
 
       - name: Build TeX Live full tree
+        env:
+          MAKEFLAGS: ${{ env.MAKE_PARALLELISM }}
         run: |
           make source/texmfrepo.txt
           make build/texlive-full.txt

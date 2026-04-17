@@ -4,27 +4,38 @@ on:
   workflow_dispatch:
     inputs:
       busytexreleasetag:
-        description: 'busytex release tag'
+        description: 'busytex native release tag'
+        required: true
+      privaterepo:
+        description: 'Use authenticated download (required for private repos)'
+        type: boolean
         required: false
-        default: 'build_native_f07c747e4a73cfde8e174bfa67ba8aca28d1a161_21102896642_1'
+        default: false
 
 env:
   UBUNTUPACKAGES: texlive-latex-extra texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended
-  EMSCRIPTEN_VERSION: 3.1.43
-  MAKE_PARALLELISM: -j2
+  EMSCRIPTEN_VERSION: 5.0.4
+  MAKE_PARALLELISM: -j4
 
 jobs:
 
   build-wasm:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Install Prerequisites
-        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools
+        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries
 
       - uses: actions/checkout@v4
 
       - name: Download native binaries
-        run: make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexreleasetag }} download-native
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.privaterepo }}" = "true" ]; then
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexreleasetag }} download-native-auth
+          else
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexreleasetag }} download-native
+          fi
 
       - name: Download TexLive Full
         run: make source/texmfrepo.txt

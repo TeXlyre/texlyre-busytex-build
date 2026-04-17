@@ -2,7 +2,7 @@ name: build-native
 on: workflow_dispatch
 
 env:
-  MAKE_PARALLELISM: -j2
+  MAKE_PARALLELISM: -j4
   TEXBIN: ctangle otangle tangle tangleboot ctangleboot tie web2c/fixwrites web2c/makecpool web2c/splitup web2c/web2c
   UBUNTU: https://packages.ubuntu.com/noble/
   UBUNTUPACKAGES: texlive-latex-extra texlive-latex-base texlive-latex-recommended texlive-science texlive-fonts-recommended
@@ -10,8 +10,8 @@ env:
 jobs:
 
   build-native:
-    runs-on: ubuntu-22.04
-    container: alpine:3.18.3
+    runs-on: ubuntu-24.04
+    container: alpine:3.21.7
     steps:
       - name: Install Prerequisites including github.com/cli/cli
         #run: sudo apt-get install xz-utils strace cmake unzip gh gperf

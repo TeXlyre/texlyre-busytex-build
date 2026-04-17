@@ -233,12 +233,6 @@ source/texmfrepo.txt:
 	find $(basename $@) > $@
 
 source/texlive.patched: source/texlive.txt
-	# Cosmopolitan Libc doesn't support arguments with spaces; remove an extra trailing space here:
-	# https://github.com/TeX-Live/texlive-source/blob/tags/texlive-2023.0/libs/icu/icu-src/source/common/Makefile.in#L72
-	sed -i 's@" "@""@' $(abspath source/texlive/libs/icu/icu-src/source/common/Makefile.in)
-	# See the contents of `cosmo_getpass.h` for more details.
-	cp cosmo_getpass.h                    $(abspath source/texlive/texk/dvipdfm-x/cosmo_getpass.h)
-	sed -i '1i#include "cosmo_getpass.h"' $(abspath source/texlive/texk/dvipdfm-x/dvipdfmx.c)
 	touch $@
 
 build/%/texlive.configured: source/texlive.patched
@@ -723,3 +717,15 @@ download-native:
 	#-$(CC_native) source/texlive/libs/freetype2/freetype-src/src/tools/apinames.c -o build/native/texlive/libs/freetype2/ft-build/apinames
 	chmod +x $(addprefix build/native/texlive/texk/web2c/, $(BUSYTEX_TEXBIN)) $(addprefix build/native/texlive/texk/web2c/web2c/, $(BUSYTEX_WEB2CBIN))
 
+download-native-auth:
+	mkdir -p source build/native build/native/texlive/texk/web2c/web2c
+	gh release download $(notdir $(URLRELEASE)) \
+	  --repo $(GITHUB_REPOSITORY) \
+	  $(foreach bin,busytex busytex.tar $(BUSYTEX_TEXBIN) $(BUSYTEX_WEB2CBIN),--pattern "$(bin)") \
+	  --dir build/native
+	mv $(addprefix build/native/,$(BUSYTEX_TEXBIN)) build/native/texlive/texk/web2c/
+	mv $(addprefix build/native/,$(BUSYTEX_WEB2CBIN)) build/native/texlive/texk/web2c/web2c/
+	chown $(shell whoami) $(BUSYTEX_native) || true
+	chmod +x $(BUSYTEX_native)
+	chmod +x $(addprefix build/native/texlive/texk/web2c/,$(BUSYTEX_TEXBIN))
+	chmod +x $(addprefix build/native/texlive/texk/web2c/web2c/,$(BUSYTEX_WEB2CBIN))
