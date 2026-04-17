@@ -718,7 +718,9 @@ download-native:
 	chmod +x $(addprefix build/native/texlive/texk/web2c/, $(BUSYTEX_TEXBIN)) $(addprefix build/native/texlive/texk/web2c/web2c/, $(BUSYTEX_WEB2CBIN))
 
 download-native-auth:
-	mkdir -p source build/native build/native/texlive/texk/web2c/web2c
+	mkdir -p source build/native build/native/texlive/texk/web2c/web2c \
+	         build/native/texlive/libs/icu/icu-build/bin \
+	         build/native/texlive/libs/freetype2/ft-build
 	gh release download $(notdir $(URLRELEASE)) \
 	  --repo $(GITHUB_REPOSITORY) \
 	  $(foreach bin,busytex busytex.tar $(BUSYTEX_TEXBIN) $(BUSYTEX_WEB2CBIN),--pattern "$(bin)") \
@@ -729,3 +731,9 @@ download-native-auth:
 	chmod +x $(BUSYTEX_native)
 	chmod +x $(addprefix build/native/texlive/texk/web2c/,$(BUSYTEX_TEXBIN))
 	chmod +x $(addprefix build/native/texlive/texk/web2c/web2c/,$(BUSYTEX_WEB2CBIN))
+	file $(BUSYTEX_native)
+	$(BUSYTEX_native)
+	-rm build/native/texlive/libs/icu/icu-build/bin/icupkg \
+	    build/native/texlive/libs/icu/icu-build/bin/pkgdata
+	-ln -s $(shell which icupkg)  build/native/texlive/libs/icu/icu-build/bin/
+	-ln -s $(shell which pkgdata) build/native/texlive/libs/icu/icu-build/bin/
