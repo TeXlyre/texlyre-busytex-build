@@ -11,8 +11,6 @@ URL_texlive = https://github.com/TeX-Live/texlive-source/archive/refs/heads/tags
 #URL_texlive_full_iso_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/texlive2023-20230313.iso.00 ...
 URL_expat            = https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz
 URL_fontconfig       = https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.13.96.tar.gz
-URL_ubuntu_release   = https://packages.ubuntu.com/noble/
-URL_ubuntu_release_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/
 
 BUSYTEX_BIN          = busytex busytexextra
 BUSYTEX_TEXBIN       = ctangle otangle tangle tangleboot ctangleboot tie
@@ -81,7 +79,6 @@ OBJ_KPATHSEA  = busytex_kpsewhich.o busytex_kpsestat.o busytex_kpseaccess.o busy
 OBJ_DEPS      = $(addprefix texlive/libs/, harfbuzz/libharfbuzz.a graphite2/libgraphite2.a teckit/libTECkit.a libpng/libpng.a) fontconfig/src/.libs/libfontconfig.a $(addprefix texlive/libs/, freetype2/libfreetype.a pplib/libpplib.a zlib/libz.a zziplib/libzzip.a libpaper/libpaper.a icu/icu-build/lib/libicuuc.a icu/icu-build/lib/libicudata.a lua53/.libs/libtexlua53.a xpdf/libxpdf.a) texlive/texk/kpathsea/.libs/libkpathsea.a expat/libexpat.a
 
 OBJ_DEPS_XETEX= fontconfig/src/.libs/libfontconfig.a $(addprefix texlive/libs/, icu/icu-build/lib/libicuuc.a icu/icu-build/lib/libicudata.a) 
-
 
 ##############################################################################################################################
 
@@ -545,11 +542,6 @@ build/wasm/texlive-%.fmt-rebuilt: build/wasm/busytex.js build/texlive-%.txt buil
 	rm -f build/wasm/texlive-$*.js.tmp
 	touch $@
 
-build/wasm/ubuntu/%.js: $(TEXMFFULL)
-	mkdir -p $(dir $@)
-	$(PYTHON) $(EMROOT)/tools/file_packager.py $(basename $@).data --js-output=$@ --export-name=BusytexPipeline --lz4 --use-preload-cache $(shell $(PYTHON) ubuntu_package_preload.py --package $(subst _, ,$(notdir $(basename $@))) --texmf $(TEXMFFULL) --url $(URL_ubuntu_release_cache) --skip-log $@.skip.txt --good-log $@.good.txt --providespackage-log $@.providespackage.txt --ubuntu-log $@.ubuntu.txt)
-	-cat $@.providespackage.txt $@ > $@.tmp; mv $@.tmp $@
-
 ################################################################################################################
 
 .PHONY: build/native/texlivedependencies build/wasm/texlivedependencies
@@ -634,9 +626,6 @@ wasm-postbuild-hyphenation-fmt:
 	rm -f build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
 	$(MAKE) build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
 
-.PHONY: ubuntu-wasm
-ubuntu-wasm: build/wasm/ubuntu/texlive-latex-extra.js build/wasm/ubuntu/texlive-base_texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended.js
-
 ################################################################################################################
 
 .PHONY: example
@@ -651,7 +640,6 @@ build/versions.txt:
 	mkdir -p build
 	echo 'busytex dependencies:'                                        > $@
 	echo texlive: \\url{$(URL_texlive)} \\url{$(URL_texlive_full_iso)} >> $@
-	echo ubuntu packages: \\url{$(URL_ubuntu_release)}                 >> $@
 	echo expat: \\url{$(URL_expat)}                                    >> $@
 	echo fontconfig: \\url{$(URL_fontconfig)}                          >> $@
 	echo emscripten: $(EMSCRIPTEN_VERSION)                             >> $@
@@ -694,7 +682,6 @@ dist-wasm:
 	-cp build/wasm/texlive-extra.js build/wasm/texlive-extra.data $@
 	-cp build/wasm/texlive-basic.js.providespackage.txt build/wasm/texlive-extra.js.providespackage.txt $@
 	-cp web/busytex_pipeline.js		web/busytex_worker.js 		  $@
-	#-cp build/wasm/ubuntu/*.js      build/wasm/ubuntu/*.data      $@ 
 
 dist-native-full: build/native/busytex
 	mkdir -p $@

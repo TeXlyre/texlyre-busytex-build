@@ -14,7 +14,6 @@ on:
         default: false
 
 env:
-  UBUNTUPACKAGES: texlive-latex-extra texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended
   EMSCRIPTEN_VERSION: 5.0.4
   MAKE_PARALLELISM: -j4
 
@@ -62,10 +61,10 @@ jobs:
       - name: Install TexLive
         env:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
-        run: make build/texlive-basic.txt build/texlive-extra.txt build/texlive-full.txt
+        run: make build/texlive-basic.txt build/texlive-extra.txt
 
-      - name: Clean-up texmf repo
-        run: rm -rf source/texmfrepo
+      - name: Clean-up texmf sources and ISO
+        run: rm -rf source/texmfrepo source/texlive2026.iso
 
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v13
@@ -84,7 +83,6 @@ jobs:
         run: |
             make build/wasm/texlive-basic.js
             make build/wasm/texlive-extra.js
-            make -e TEXMFFULL=build/texlive-full $(printf "build/wasm/ubuntu/%s.js " $UBUNTUPACKAGES)
             make dist-wasm
 
       - name: Post-process hyphenation and XeTeX fmt
@@ -119,12 +117,4 @@ jobs:
             build/texlive-extra.profile \
             build/wasm/texlive-extra.js \
             build/wasm/texlive-extra.data \
-            build/wasm/texlive-extra.js.providespackage.txt \
-            build/texlive-full.txt \
-            build/texlive-full.profile \
-            $(printf "build/wasm/ubuntu/%s.js " $UBUNTUPACKAGES) \
-            $(printf "build/wasm/ubuntu/%s.data " $UBUNTUPACKAGES) \
-            $(printf "build/wasm/ubuntu/%s.js.skip.txt " $UBUNTUPACKAGES) \
-            $(printf "build/wasm/ubuntu/%s.js.good.txt " $UBUNTUPACKAGES) \
-            $(printf "build/wasm/ubuntu/%s.js.providespackage.txt " $UBUNTUPACKAGES) \
-            $(printf "build/wasm/ubuntu/%s.js.ubuntu.txt " $UBUNTUPACKAGES)
+            build/wasm/texlive-extra.js.providespackage.txt      
