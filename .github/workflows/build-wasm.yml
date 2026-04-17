@@ -6,6 +6,7 @@ on:
       busytexreleasetag:
         description: 'busytex native release tag'
         required: true
+        default: build_native_25cb7a9ae6f588003d82857b956e4965bea9a753_24562298930_1
       privaterepo:
         description: 'Use authenticated download (required for private repos)'
         type: boolean
@@ -22,6 +23,24 @@ jobs:
   build-wasm:
     runs-on: ubuntu-24.04
     steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/share/swift \
+            /usr/local/.ghcup \
+            /usr/lib/jvm \
+            /usr/share/gradle-* \
+            /usr/share/miniconda \
+            /usr/local/share/chromium \
+            /usr/local/share/powershell
+          sudo docker image prune -af 2>/dev/null || true
+          df -h
+
       - name: Install Prerequisites
         run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries
 
@@ -45,7 +64,7 @@ jobs:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
         run: make build/texlive-basic.txt build/texlive-extra.txt build/texlive-full.txt
 
-      - name: Clean-up texmf sources
+      - name: Clean-up texmf repo
         run: rm -rf source/texmfrepo
 
       - name: Setup Emscripten
