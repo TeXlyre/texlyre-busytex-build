@@ -21,7 +21,7 @@ KPSE_EXTENSIONS = {
     7:  ['.bst'],
     10: ['.fmt'],
     11: ['.map'],
-    26: ['.tex', '.sty', '.cls', '.fd', '.def', '.cfg', '.ltx', '.dtx', '.ldf', '.clo', '.bbx', '.cbx', '.lbx', '.dbx'],
+    26: ['.tex', '.sty', '.cls', '.fd', '.def', '.cfg', '.ltx', '.dtx', '.ldf', '.clo', '.bbx', '.cbx', '.lbx', '.dbx', '.rtx'],
     32: ['.pfa', '.pfb'],
     33: ['.vf'],
     35: ['.ttf', '.ttc'],
@@ -93,6 +93,11 @@ def find_file(name, fmt):
                 if result:
                     break
 
+    if result is None and fmt == 26:
+        # format 26 is the generic tex input search; try the bare name against
+        # the full index regardless of extension to catch .rtx, .bst, etc.
+        result = index.get(key)
+
     if result and redis_client:
         try:
             redis_client.setex(cache_key, 86400, result)
@@ -111,7 +116,11 @@ def fetch_file(fileformat, filename):
 
     filepath = find_file(filename, fileformat)
     if filepath is None:
-        return 'File not found', 301
+        return 'File not found', 404
+
+    # expected_exts = KPSE_EXTENSIONS.get(fileformat)
+    # if expected_exts and not any(filepath.lower().endswith(ext) for ext in expected_exts):
+    #     return 'File not found', 404
 
     response = make_response(send_file(filepath, mimetype='application/octet-stream'))
     response.headers['fileid'] = os.path.basename(filepath)
