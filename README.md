@@ -27,6 +27,7 @@ wget -P dist --backups=1 $(printf "https://github.com/TeXlyre/texlyre-busytex-bu
   busytex\_pipeline.js busytex\_worker.js \\
   busytex.wasm busytex.js \\
   texlive-basic.js texlive-basic.data \\
+  texlive-recommended.js texlive-recommended.data \\
   texlive-extra.js texlive-extra.data)
 
 python3 example/example.py
@@ -89,13 +90,14 @@ make smoke-native
 
 # TeX Live tree
 make source/texmfrepo.txt
-make build/texlive-basic.txt build/texlive-extra.txt build/texlive-full.txt
+make build/texlive-basic.txt build/texlive-recommended.txt build/texlive-extra.txt build/texlive-full.txt
 
 # WASM build
 make wasm
 
 # TeX Live data packages
 make build/wasm/texlive-basic.js
+make build/wasm/texlive-recommended.js
 make build/wasm/texlive-extra.js
 
 # Post-process WASM hyphenation and XeTeX patch
@@ -117,7 +119,7 @@ make clean
 
 ## TeX Live package server
 
-For packages not shipped in `texlive-basic` or `texlive-extra`, run a server that streams them on demand. The remote endpoint is configurable via the `compile()` method in `web/busytex\_pipeline.js`.
+For packages not shipped in `texlive-basic`, `texlive-recommended` or `texlive-extra`, run a server that streams them on demand. The remote endpoint is configurable via the `compile()` method in `web/busytex\_pipeline.js`.
 
 Build the full TeX Live tree first:
 

@@ -41,6 +41,7 @@ jobs:
           name: build
           path: |
             #build/texlive-basic/
+            #build/texlive-recommended/
             #build/texlive-extra/
             #build/native/busytex
             #build/native/busytexextra
