@@ -1,6 +1,6 @@
 import os, re, glob
 
-for profile in ['basic', 'extra']:
+for profile in ['basic', 'recommended', 'extra']:
     dat = f'build/texlive-{profile}/texmf-dist/texmf-var/tex/generic/config/language.dat'
     if not os.path.exists(dat):
         continue
