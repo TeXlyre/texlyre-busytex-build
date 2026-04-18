@@ -7,11 +7,8 @@
     <link rel="busytex" type="text/javascript" id="busytex_js" href="/dist/busytex.js" />
     <link rel="busytex" type="application/wasm" id="busytex_wasm" href="/dist/busytex.wasm" />
     <link rel="busytex" type="text/javascript" id="texlive_basic" href="/dist/texlive-basic.js" />
-    <link rel="busytex" type="text/javascript" id="texlive_ubuntu_science"
-        href="/dist/texlive-latex-base_texlive-latex-recommended_texlive-science_texlive-fonts-recommended.js" />
-    <link rel="busytex" type="text/javascript" id="texlive_ubuntu_recommended"
-        href="/dist/texlive-latex-recommended.js" />
-    <link rel="busytex" type="text/javascript" id="texlive_ubuntu_extra" href="/dist/texlive-latex-extra.js" />
+    <link rel="busytex" type="text/javascript" id="texlive_recommended" href="/dist/texlive-recommended.js" />
+    <link rel="busytex" type="text/javascript" id="texlive_extra" href="/dist/texlive-extra.js" />
 </head>
 
 <body style="width: 100%; height: 100%; overflow: hidden">
@@ -38,12 +35,10 @@
         </select>
         <input type="checkbox" id="checked_texlive_auto" name="checked_texlive_auto" checked>
         <label for="checked_texlive_auto">auto selection</label>
-        <input type="checkbox" id="checked_texlive_ubuntu_recommended" name="checked_texlive_ubuntu_recommended">
-        <label for="checked_texlive_ubuntu_recommended">texlive-latex-recommended</label>
-        <input type="checkbox" id="checked_texlive_ubuntu_extra" name="checked_texlive_ubuntu_extra">
-        <label for="checked_texlive_ubuntu_extra">texlive-latex-extra</label>
-        <input type="checkbox" id="checked_texlive_ubuntu_science" name="checked_texlive_ubuntu_science">
-        <label for="checked_texlive_ubuntu_science">texlive-science</label>
+        <input type="checkbox" id="checked_texlive_recommended" name="checked_texlive_recommended">
+        <label for="checked_texlive_recommended">texlive-latex-recommended</label>
+        <input type="checkbox" id="checked_texlive_extra" name="checked_texlive_extra">
+        <label for="checked_texlive_extra">texlive-latex-extra</label>
     </div>
     <div><iframe style="width: 98%; height:25%" id="preview"></iframe></div>
 
@@ -91,10 +86,10 @@ Blablabla said Nobody ~\cite{Nobody06}.
             let data_packages_js = null;
             if (!use_auto) {
                 data_packages_js = [];
-                for (const ubuntu_package_name of ['texlive_ubuntu_recommended', 'texlive_ubuntu_extra', 'texlive_ubuntu_science']) {
-                    const checked = document.getElementById('checked_' + ubuntu_package_name).checked;
+                for (const texlive_package_name of ['texlive_recommended', 'texlive_extra']) {
+                    const checked = document.getElementById('checked_' + texlive_package_name).checked;
                     if (checked)
-                        data_packages_js.push(texlive_data_packages_js.find(path => path.includes(ubuntu_package_name)));
+                        data_packages_js.push(texlive_data_packages_js.find(path => path.includes(texlive_package_name)));
                 }
             }
 

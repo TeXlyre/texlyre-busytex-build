@@ -61,7 +61,7 @@ jobs:
       - name: Install TexLive
         env:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
-        run: make build/texlive-basic.txt build/texlive-extra.txt
+        run: make build/texlive-basic.txt build/texlive-recommended.txt build/texlive-extra.txt
 
       - name: Clean-up texmf sources and ISO
         run: rm -rf source/texmfrepo source/texlive2026.iso
@@ -82,6 +82,7 @@ jobs:
       - name: Create packages and dist
         run: |
             make build/wasm/texlive-basic.js
+            make build/wasm/texlive-recommended.js
             make build/wasm/texlive-extra.js
             make dist-wasm
 
@@ -113,6 +114,10 @@ jobs:
             build/wasm/texlive-basic.js \
             build/wasm/texlive-basic.data \
             build/wasm/texlive-basic.js.providespackage.txt \
+            build/texlive-recommended.txt \
+            build/wasm/texlive-recommended.js \
+            build/wasm/texlive-recommended.data \
+            build/wasm/texlive-recommended.js.providespackage.txt \
             build/texlive-extra.txt \
             build/texlive-extra.profile \
             build/wasm/texlive-extra.js \

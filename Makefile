@@ -447,7 +447,27 @@ build/texlive-basic.profile:
 	echo TEXMFSYSCONFIG $(ROOT)/$(basename $@)/texmf-dist/texmf-config >> $@ 
 	echo "collection-xetex  1"                                         >> $@ 
 	echo "collection-latex  1"                                         >> $@ 
+	echo "collection-luatex 1"                                         >> $@
+	echo "collection-fontutils 1"                                      >> $@ 
+
+build/texlive-recommended.profile:
+	mkdir -p $(dir $@) # https://tex.stackexchange.com/questions/500339/what-makes-up-each-tex-live-install-tl-scheme https://tug.org/svn/texlive/trunk/Master/tlpkg/tlpsrc/collection-basic.tlpsrc?view=markup
+	echo selected_scheme scheme-basic                                   > $@
+	echo TEXDIR $(ROOT)/$(basename $@)                                 >> $@ 
+	echo TEXMFLOCAL $(ROOT)/$(basename $@)/texmf-dist/texmf-local      >> $@
+	echo TEXMFSYSVAR $(ROOT)/$(basename $@)/texmf-dist/texmf-var       >> $@ 
+	echo TEXMFSYSCONFIG $(ROOT)/$(basename $@)/texmf-dist/texmf-config >> $@ 
+	echo "collection-xetex  1"                                         >> $@ 
+	echo "collection-latex  1"                                         >> $@ 
 	echo "collection-luatex 1"                                         >> $@ 
+	echo "collection-fontsrecommended 1"                               >> $@ 
+	echo "collection-fontutils 1"                                      >> $@
+	echo "collection-latexrecommended  1"                              >> $@ 
+# 	echo "collection-latexextra  1"                                    >> $@ 
+# 	echo "collection-langarabic 1"                                     >> $@
+# 	echo "collection-langchinese 1"                                    >> $@
+# 	echo "collection-langjapanese 1"                                   >> $@
+# 	echo "collection-langkorean 1"                                     >> $@
 
 build/texlive-extra.profile:
 	mkdir -p $(dir $@) # https://tex.stackexchange.com/questions/500339/what-makes-up-each-tex-live-install-tl-scheme https://tug.org/svn/texlive/trunk/Master/tlpkg/tlpsrc/collection-basic.tlpsrc?view=markup
@@ -462,7 +482,7 @@ build/texlive-extra.profile:
 	echo "collection-fontsrecommended 1"                               >> $@ 
 	echo "collection-fontutils 1"                                      >> $@
 	echo "collection-latexrecommended  1"                              >> $@ 
-# 	echo "collection-latexextra  1"                                    >> $@ 
+	echo "collection-latexextra  1"                                    >> $@ 
 # 	echo "collection-langarabic 1"                                     >> $@
 # 	echo "collection-langchinese 1"                                    >> $@
 # 	echo "collection-langjapanese 1"                                   >> $@
@@ -618,13 +638,14 @@ wasm-all: wasm wasm-pdftex wasm-xetex
 .PHONY: wasm-postbuild-hyphenation-fmt
 wasm-postbuild-hyphenation-fmt:
 	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-basic/icudt78l.dat
+	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-recommended/icudt78l.dat
 	cp build/wasm/texlive/libs/icu/icu-build/data/out/tmp/icudt78l.dat build/texlive-extra/icudt78l.dat
 	$(MAKE) -B build/wasm/busytex.js
-	$(foreach profile,basic extra,$(foreach pkg,ruhyphen ukrhyph,archive=$$(ls source/texmfrepo/archive/$(pkg).r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.' | head -1); if [ -n "$$archive" ]; then echo "Extracting $$archive -> build/texlive-$(profile)/texmf-dist"; tar -xJf "$$archive" -C build/texlive-$(profile)/texmf-dist --exclude='tlpkg'; else echo "WARNING: no archive found for $(pkg)"; fi; ))
-	$(foreach profile,basic extra,mktexlsr build/texlive-$(profile)/texmf-dist; )
+	$(foreach profile,basic recommended extra,$(foreach pkg,ruhyphen ukrhyph,archive=$$(ls source/texmfrepo/archive/$(pkg).r*.tar.xz 2>/dev/null | grep -v '\.source\.' | grep -v '\.doc\.' | head -1); if [ -n "$$archive" ]; then echo "Extracting $$archive -> build/texlive-$(profile)/texmf-dist"; tar -xJf "$$archive" -C build/texlive-$(profile)/texmf-dist --exclude='tlpkg'; else echo "WARNING: no archive found for $(pkg)"; fi; ))
+	$(foreach profile,basic recommended extra,mktexlsr build/texlive-$(profile)/texmf-dist; )
 	find build/texlive-basic -name "ruhyphen.tex"
-	rm -f build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
-	$(MAKE) build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
+	rm -f build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-recommended.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
+	$(MAKE) build/wasm/texlive-basic.fmt-rebuilt build/wasm/texlive-recommended.fmt-rebuilt build/wasm/texlive-extra.fmt-rebuilt
 
 ################################################################################################################
 
@@ -677,11 +698,14 @@ clean-example:
 .PHONY: dist-wasm dist-native dist-native-full download-native
 dist-wasm:
 	mkdir -p $@
-	-cp build/wasm/busytex.js       build/wasm/busytex.wasm       $@ 
-	-cp build/wasm/texlive-basic.js build/wasm/texlive-basic.data $@ 
+	-cp build/wasm/busytex.js       build/wasm/busytex.wasm       $@
+	-cp build/wasm/texlive-basic.js build/wasm/texlive-basic.data $@
+	-cp build/wasm/texlive-recommended.js build/wasm/texlive-recommended.data $@
 	-cp build/wasm/texlive-extra.js build/wasm/texlive-extra.data $@
-	-cp build/wasm/texlive-basic.js.providespackage.txt build/wasm/texlive-extra.js.providespackage.txt $@
-	-cp web/busytex_pipeline.js		web/busytex_worker.js 		  $@
+	-cp build/wasm/texlive-basic.js.providespackage.txt \
+	    build/wasm/texlive-recommended.js.providespackage.txt \
+	    build/wasm/texlive-extra.js.providespackage.txt $@
+	-cp web/busytex_pipeline.js web/busytex_worker.js $@
 
 dist-native-full: build/native/busytex
 	mkdir -p $@
