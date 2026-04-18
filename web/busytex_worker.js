@@ -2,7 +2,7 @@ importScripts('busytex_pipeline.js');
 
 self.pipeline = null;
 
-onmessage = async ({ data: { files, main_tex_path, bibtex, busytex_wasm, busytex_js, preload_data_packages_js, data_packages_js, texmf_local, preload, verbose, driver, remote_endpoint, read_project_files, write_texlive_remote_files } }) => {
+onmessage = async ({ data: { files, main_tex_path, bibtex, busytex_wasm, busytex_js, preload_data_packages_js, data_packages_js, texmf_local, preload, verbose, driver, remote_endpoint, read_project_files, write_texlive_remote_files, write_texlive_remote_misses } }) => {
     // TODO: cache data packages from here? https://developer.mozilla.org/en-US/docs/Web/API/Cache
 
     if (busytex_wasm && busytex_js && preload_data_packages_js) {
@@ -28,6 +28,15 @@ onmessage = async ({ data: { files, main_tex_path, bibtex, busytex_wasm, busytex
         }
         catch (err) {
             postMessage({ exception: 'Exception writing remote files: ' + err.toString() + '\nStack:\n' + err.stack });
+        }
+    }
+    else if (write_texlive_remote_misses && self.pipeline) {
+        try {
+            await self.pipeline.write_texlive_remote_misses(write_texlive_remote_misses);
+            postMessage({ texlive_remote_misses_written: true });
+        }
+        catch (err) {
+            postMessage({ exception: 'Exception writing remote misses: ' + err.toString() + '\nStack:\n' + err.stack });
         }
     }
     else if (files && self.pipeline) {

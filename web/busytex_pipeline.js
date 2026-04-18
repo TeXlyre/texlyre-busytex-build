@@ -498,6 +498,12 @@ class BusytexPipeline {
             Module.kpse_remote_register(name, format != null ? format : 26, contents);
     }
 
+    async write_texlive_remote_misses(keys) {
+        const Module = await this.Module;
+        if (!Module) throw new Error('Module not initialized');
+        Module.kpse_remote_register_misses(keys);
+    }
+
     async compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js = [], remote_endpoint = 'http://localhost:8070') {
         if (!this.supported_drivers.includes(driver))
             throw new Error(`Driver [${driver}] is not supported, only [${this.supported_drivers}] are supported`);
