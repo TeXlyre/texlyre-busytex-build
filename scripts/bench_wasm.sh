@@ -166,7 +166,7 @@ async function run() {
     await pipeline.on_initialized_promise;
 
     const tic    = Date.now();
-    const result = await pipeline.compile(FILES, TEX_FILE, false, BusytexPipeline.VerboseSilent, 'pdftex_bibtex8', [], REMOTE_ENDPOINT);
+    const result = await pipeline.compile(FILES, TEX_FILE, false, false, false, BusytexPipeline.VerboseSilent, 'pdftex_bibtex8', [], REMOTE_ENDPOINT);
     const elapsed = Date.now() - tic;
 
     process.stdout.write(
