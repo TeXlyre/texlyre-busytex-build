@@ -2,11 +2,16 @@ mergeInto(LibraryManager.library, {
     $KPSE_REMOTE__postset: 'KPSE_REMOTE.init();',
     $KPSE_REMOTE: {
         dir: '/tmp/texlive_remote',
+        missesFile: '/tmp/texlive_remote/.misses.json',
         hits: null,
         misses: null,
+        missesLoaded: false,
         init: function () {
             Module['kpse_remote_register'] = function (name, format, contents) {
                 return KPSE_REMOTE.register(name, format, contents);
+            };
+            Module['kpse_remote_register_misses'] = function (keys) {
+                return KPSE_REMOTE.registerMisses(keys);
             };
             Module['kpse_remote_has'] = function (name, format) {
                 KPSE_REMOTE.ensure();
@@ -15,12 +20,21 @@ mergeInto(LibraryManager.library, {
             Module['kpse_remote_clear'] = function () {
                 KPSE_REMOTE.hits = {};
                 KPSE_REMOTE.misses = {};
+                KPSE_REMOTE.missesLoaded = false;
             };
         },
         ensure: function () {
             if (KPSE_REMOTE.hits === null) KPSE_REMOTE.hits = {};
             if (KPSE_REMOTE.misses === null) KPSE_REMOTE.misses = {};
             try { FS.stat(KPSE_REMOTE.dir); } catch (e) { try { FS.mkdir(KPSE_REMOTE.dir); } catch (e2) { } }
+            if (!KPSE_REMOTE.missesLoaded) {
+                KPSE_REMOTE.missesLoaded = true;
+                try {
+                    var raw = FS.readFile(KPSE_REMOTE.missesFile, { encoding: 'utf8' });
+                    var keys = JSON.parse(raw);
+                    if (Array.isArray(keys)) for (var i = 0; i < keys.length; i++) KPSE_REMOTE.misses[keys[i]] = 1;
+                } catch (e) { }
+            }
         },
         pathFor: function (name, format) {
             var safe = name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -33,6 +47,13 @@ mergeInto(LibraryManager.library, {
             KPSE_REMOTE.hits[format + '/' + name] = savepath;
             delete KPSE_REMOTE.misses[format + '/' + name];
             return savepath;
+        },
+        registerMisses: function (keys) {
+            KPSE_REMOTE.ensure();
+            if (Array.isArray(keys))
+                for (var i = 0; i < keys.length; i++) KPSE_REMOTE.misses[keys[i]] = 1;
+            var merged = Object.keys(KPSE_REMOTE.misses);
+            try { FS.writeFile(KPSE_REMOTE.missesFile, JSON.stringify(merged)); } catch (e) { }
         },
         lookup: function (name, format) {
             KPSE_REMOTE.ensure();
