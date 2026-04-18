@@ -89,7 +89,7 @@ async function run() {
 
             await pipeline.on_initialized_promise;
 
-            const result = await pipeline.compile(texFiles, 'example.tex', false, BusytexPipeline.VerboseSilent, driver, []);
+            const result = await pipeline.compile(texFiles, 'example.tex', false, false, false, BusytexPipeline.VerboseSilent, driver, []);
 
             console.log   = _consoleLog;
             console.error = _consoleError;
