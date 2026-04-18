@@ -494,15 +494,8 @@ class BusytexPipeline {
     async write_texlive_remote_files(files) {
         const Module = await this.Module;
         if (!Module) throw new Error('Module not initialized');
-        const { FS, PATH } = Module;
-        const remote_dir = '/tmp/texlive_remote';
-        if (!FS.analyzePath(remote_dir).exists)
-            FS.mkdir(remote_dir);
-        for (const { path, contents } of files) {
-            const absolute = PATH.join(remote_dir, path);
-            this.mkdir_p(FS, PATH, PATH.dirname(absolute), new Set());
-            FS.writeFile(absolute, contents);
-        }
+        for (const { name, format, contents } of files)
+            Module.kpse_remote_register(name, format != null ? format : 26, contents);
     }
 
     async compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js = [], remote_endpoint = 'http://localhost:8070') {
