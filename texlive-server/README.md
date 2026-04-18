@@ -1,6 +1,6 @@
 # Texlive Server
 
-Serves TeX Live 2026 files on demand for use with [busytex](https://github.com/busytex/busytex).
+Serves TeXLive 2026 files on demand for use with [busytex](https://github.com/busytex/busytex).
 
 Implements the endpoint contract expected by `TEXLIVE_REMOTE_ENDPOINT` in `busytex_pipeline.js`:
 ```
@@ -11,7 +11,7 @@ Returns raw file bytes with a `fileid` response header, or HTTP 301 if not found
 
 ## Requirements
 
-- A TeX Live 2026 `texmf-dist` tree on disk (from `make build/texlive-full.txt` in the busytex repo, or extracted from the ISO)
+- A TeXLive 2026 `texmf-dist` tree on disk (from `make build/texlive-full.txt` in the busytex repo, or extracted from the ISO)
 - Set `TEXMF_ROOT` to the path of that tree
 
 ## Running locally (bare metal)
