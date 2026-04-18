@@ -2,7 +2,7 @@ importScripts('busytex_pipeline.js');
 
 self.pipeline = null;
 
-onmessage = async ({ data: { files, main_tex_path, bibtex, busytex_wasm, busytex_js, preload_data_packages_js, data_packages_js, texmf_local, preload, verbose, driver, remote_endpoint, read_project_files, write_texlive_remote_files, write_texlive_remote_misses } }) => {
+onmessage = async ({ data: { files, main_tex_path, bibtex, makeindex, rerun, busytex_wasm, busytex_js, preload_data_packages_js, data_packages_js, texmf_local, preload, verbose, driver, remote_endpoint, read_project_files, write_texlive_remote_files, write_texlive_remote_misses } }) => {
     // TODO: cache data packages from here? https://developer.mozilla.org/en-US/docs/Web/API/Cache
 
     if (busytex_wasm && busytex_js && preload_data_packages_js) {
@@ -41,7 +41,7 @@ onmessage = async ({ data: { files, main_tex_path, bibtex, busytex_wasm, busytex
     }
     else if (files && self.pipeline) {
         try {
-            postMessage(await self.pipeline.compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js, remote_endpoint))
+            postMessage(await self.pipeline.compile(files, main_tex_path, bibtex, makeindex, rerun, verbose, driver, data_packages_js, remote_endpoint))
         }
         catch (err) {
             postMessage({ exception: 'Exception during compilation: ' + err.toString() + '\nStack:\n' + err.stack });
