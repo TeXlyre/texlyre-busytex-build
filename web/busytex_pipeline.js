@@ -504,7 +504,7 @@ class BusytexPipeline {
         Module.kpse_remote_register_misses(keys);
     }
 
-    async compile(files, main_tex_path, bibtex, verbose, driver, data_packages_js = [], remote_endpoint = 'http://localhost:8070') {
+    async compile(files, main_tex_path, bibtex, makeindex = null, rerun = null, verbose, driver, data_packages_js = [], remote_endpoint = 'http://localhost:8070') {
         if (!this.supported_drivers.includes(driver))
             throw new Error(`Driver [${driver}] is not supported, only [${this.supported_drivers}] are supported`);
         this.print(`New compilation started: [${main_tex_path}]`);
@@ -535,9 +535,6 @@ class BusytexPipeline {
         this.print('Data packages used: ' + fmt_packages_list(data_packages_js));
 
         if (tex_packages_not_resolved.length > 0) {
-            // TODO: replace by regular return? override?
-            // throw new Error('Not resolved TeX packages: ' + tex_packages_not_resolved.join(', '));
-
             data_packages_js = this.data_package_resolver.data_packages_js;
             this.print('Because of unresolved TeX packages, enabling all available data packages: ' + data_packages_js.sort().toString());
         }
@@ -553,7 +550,8 @@ class BusytexPipeline {
 
         const tex_path = PATH.basename(main_tex_path), dirname = PATH.dirname(main_tex_path);
 
-        const [xdv_path, pdf_path, log_path, aux_path, blg_path, bbl_path] = ['.xdv', '.pdf', '.log', '.aux', '.blg', '.bbl'].map(ext => tex_path.replace('.tex', ext));
+        const [xdv_path, pdf_path, log_path, aux_path, blg_path, bbl_path, idx_path, ind_path, ilg_path] =
+            ['.xdv', '.pdf', '.log', '.aux', '.blg', '.bbl', '.idx', '.ind', '.ilg'].map(ext => tex_path.replace('.tex', ext));
 
         const verbose_args_for = key => (this.verbose_args[verbose] || this.verbose_args[BusytexPipeline.VerboseSilent])[key];
 
@@ -565,6 +563,7 @@ class BusytexPipeline {
         const luatex_final = ['lualatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--output-format=pdf', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat(verbose_args_for('luahbtex'));
         const luatex_nonfinal = ['lualatex', '-synctex=1', '--no-shell-escape', '--interaction=nonstopmode', '--halt-on-error', '--fmt', this.fmt.luatex, '--nosocket', tex_path].concat(verbose_args_for('luahbtex'));
         const bibtex8_cmd = ['bibtex8', '--8bit'].concat(verbose_args_for('bibtex8')).concat([aux_path]);
+        const makeindex_cmd = ['makeindex', idx_path];
         const xdvipdfmx_cmd = ['xdvipdfmx'].concat(verbose_args_for('xdvipdfmx')).concat(['-o', pdf_path, xdv_path]);
 
         const driver_cmds = {
@@ -614,23 +613,41 @@ class BusytexPipeline {
             }
         }
 
+        const makeindex_enabled = makeindex === null ? true : makeindex;
+        let makeindex_active = makeindex_enabled && exit_code == 0 && FS.analyzePath(idx_path).exists && this.read_all_text(FS, idx_path).trim() != '';
+        if (makeindex_active) {
+            ({ exit_code } = run(makeindex_cmd, this.error_messages_fatal));
+            if (exit_code == 0 && this.read_all_text(FS, ind_path).trim() == '') {
+                this.print('$ # makeindex produced no index entries, skipping extra passes');
+                makeindex_active = false;
+            }
+        } else if (makeindex === false) {
+            this.print('$ # makeindex disabled by caller');
+        }
+
+        const rerun_enabled = rerun === null ? true : rerun;
         if (exit_code == 0) {
-            for (let pass = 0; pass < this.max_tex_passes; pass++) {
-                const is_last_pass = pass === this.max_tex_passes - 1;
-                const cmd = is_last_pass ? final_cmd : nonfinal;
-                const error_messages = is_last_pass ? this.error_messages_all : this.error_messages_fatal;
+            if (rerun_enabled) {
+                for (let pass = 0; pass < this.max_tex_passes; pass++) {
+                    const is_last_pass = pass === this.max_tex_passes - 1;
+                    const cmd = is_last_pass ? final_cmd : nonfinal;
+                    const error_messages = is_last_pass ? this.error_messages_all : this.error_messages_fatal;
 
-                ({ exit_code, log: last_log } = run(cmd, error_messages));
+                    ({ exit_code, log: last_log } = run(cmd, error_messages));
 
-                if (exit_code != 0)
-                    break;
+                    if (exit_code != 0)
+                        break;
 
-                if (!this._needs_rerun(last_log)) {
-                    if (cmd !== final_cmd) {
-                        ({ exit_code, log: last_log } = run(final_cmd, this.error_messages_all));
+                    if (!this._needs_rerun(last_log)) {
+                        if (cmd !== final_cmd) {
+                            ({ exit_code, log: last_log } = run(final_cmd, this.error_messages_all));
+                        }
+                        break;
                     }
-                    break;
                 }
+            } else {
+                this.print('$ # rerun disabled by caller, running final pass only');
+                // ({ exit_code, log: last_log } = run(final_cmd, this.error_messages_all));
             }
         }
 
@@ -638,8 +655,7 @@ class BusytexPipeline {
             ({ exit_code } = run(dvi, this.error_messages_all));
         }
 
-        // Clear intermediate TeX pass logs; retain bibtex, dvipdfmx, and the final TeX pass.
-        const is_tex_log = entry => !entry.cmd.startsWith('bibtex') && !entry.cmd.startsWith('xdvipdfmx');
+        const is_tex_log = entry => !entry.cmd.startsWith('bibtex') && !entry.cmd.startsWith('makeindex') && !entry.cmd.startsWith('xdvipdfmx');
         const last_tex_idx = logs.reduce((acc, entry, i) => is_tex_log(entry) ? i : acc, -1);
         for (let i = 0; i < logs.length; i++) {
             if (is_tex_log(logs[i]) && i !== last_tex_idx)
