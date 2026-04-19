@@ -264,7 +264,7 @@ class BusytexPipeline {
             FONTCONFIG_PATH: this.dir_fontconfig,
             FONTCONFIG_FILE: this.dir_fontconfig + '/fonts.conf',
             ICU_DATA: '/texlive/',
-            TEXLIVE_REMOTE_ENDPOINT: 'http://localhost:8070'
+            TEXLIVE_REMOTE_ENDPOINT: ''
         };
 
         this.remove = (FS, log_path) => FS.analyzePath(log_path).exists ? FS.unlink(log_path) : null;
@@ -504,7 +504,7 @@ class BusytexPipeline {
         Module.kpse_remote_register_misses(keys);
     }
 
-    async compile(files, main_tex_path, bibtex, makeindex = null, rerun = null, verbose, driver, data_packages_js = [], remote_endpoint = 'http://localhost:8070') {
+    async compile(files, main_tex_path, bibtex, makeindex = null, rerun = null, verbose, driver, data_packages_js = [], remote_endpoint = '') {
         if (!this.supported_drivers.includes(driver))
             throw new Error(`Driver [${driver}] is not supported, only [${this.supported_drivers}] are supported`);
         this.print(`New compilation started: [${main_tex_path}]`);
@@ -673,3 +673,5 @@ class BusytexPipeline {
         return { pdf: pdf, synctex: synctex, log: logcat, exit_code: exit_code, logs: logs };
     }
 }
+
+if (typeof self !== 'undefined') self.BusytexPipeline = BusytexPipeline;
