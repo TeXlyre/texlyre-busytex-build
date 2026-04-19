@@ -115,6 +115,7 @@ jobs:
             build/wasm/texlive-basic.data \
             build/wasm/texlive-basic.js.providespackage.txt \
             build/texlive-recommended.txt \
+            build/texlive-recommended.profile \
             build/wasm/texlive-recommended.js \
             build/wasm/texlive-recommended.data \
             build/wasm/texlive-recommended.js.providespackage.txt \
