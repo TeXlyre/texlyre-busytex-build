@@ -1,10 +1,10 @@
 # TeXlyre-BusyTeX
 
-TeXLive 2026 compiled into a single WebAssembly module, based on [busytex](https://github.com/busytex/busytex).
+TeX Live 2026 compiled into a single WebAssembly module, based on [busytex](https://github.com/busytex/busytex).
 
 The corresponding WASM API for this build can be found at [texlyre-busytex](https://github.com/TeXlyre/texlyre-busytex).
 
-To run the package server, refer to the [TeXLive server instructions](/texlive-server/README.md).
+To run the package server, refer to the [TeX Live server instructions](/texlive-server/README.md).
 
 **Bundled engines and tools:**
 
@@ -80,7 +80,7 @@ make native
 make smoke-native
 ```
 
-If you want to provide the TeXLive ISO directly instead of having `make source/texmfrepo.txt` download it, place it in the `source/` directory first:
+If you want to provide the TeX Live ISO directly instead of having `make source/texmfrepo.txt` download it, place it in the `source/` directory first:
 
 ```shell
 wget -P source http://mirrors.ctan.org/systems/texlive/Images/texlive2026.iso
@@ -108,11 +108,11 @@ make clean
 
 ---
 
-## TeXLive package server
+## TeX Live package server
 
 For packages not included in `texlive-basic`, `texlive-recommended`, or `texlive-extra`, a server can stream them on demand. The remote endpoint is configurable via the `compile()` method in `web/busytex_pipeline.js`.
 
-Build the full TeXLive tree first:
+Build the full TeX Live tree first:
 
 ```shell
 make -B build/texlive-full.txt
@@ -151,6 +151,6 @@ TeXlyre-BusyTeX and the modifications applied to the build pipeline are licensed
 * [SwiftLaTeX](https://github.com/SwiftLaTeX/SwiftLaTeX)
 * [JavascriptSubtitlesOctopus](https://github.com/Dador/JavascriptSubtitlesOctopus)
 * [js-sha1](https://raw.githubusercontent.com/emn178/js-sha1)
-* [BLFS TeXLive](http://www.linuxfromscratch.org/blfs/view/svn/pst/texlive.html)
+* [BLFS TeX Live](http://www.linuxfromscratch.org/blfs/view/svn/pst/texlive.html)
 * latexmk: [CTAN](https://ctan.org/tex-archive/support/latexmk), [docs](https://mg.readthedocs.io/latexmk.html), [latexmk.py](https://github.com/schlamar/latexmk.py), [fork](https://github.com/JanKanis/latexmk.py), [PR #11](https://github.com/schlamar/latexmk.py/pull/11)
 * [TeX::AutoTeX::File](https://metacpan.org/release/TSCHWAND/TeX-AutoTeX-v0.906.0/view/lib/TeX/AutoTeX/File.pm)

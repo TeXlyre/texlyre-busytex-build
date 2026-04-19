@@ -40,7 +40,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}Starting Cloudflare Tunnel Setup for TeXLive Server...${NC}"
+echo -e "${YELLOW}Starting Cloudflare Tunnel Setup for TeX Live Server...${NC}"
 echo -e "${YELLOW}Using hostname: ${HOSTNAME}${NC}"
 
 # Check if cloudflared is installed
@@ -174,17 +174,17 @@ if [ ! -f "$CREDENTIALS_DIR/$TUNNEL_ID.json" ]; then
 fi
 
 # Start Docker Compose if not already running
-echo -e "${YELLOW}Checking if TeXLive server is running...${NC}"
+echo -e "${YELLOW}Checking if TeX Live server is running...${NC}"
 if ! docker ps | grep -q apt; then
-    echo -e "${YELLOW}Starting TeXLive server with Docker Compose...${NC}"
+    echo -e "${YELLOW}Starting TeX Live server with Docker Compose...${NC}"
     docker compose up -d
-    echo -e "${GREEN}TeXLive server started${NC}"
+    echo -e "${GREEN}TeX Live server started${NC}"
 else
-    echo -e "${GREEN}TeXLive server is already running${NC}"
+    echo -e "${GREEN}TeX Live server is already running${NC}"
 fi
 
 # Run the tunnel
 echo -e "${GREEN}Starting tunnel to $HOSTNAME...${NC}"
-echo -e "${YELLOW}Your TeXLive server is now accessible at: https://$HOSTNAME${NC}"
+echo -e "${YELLOW}Your TeX Live server is now accessible at: https://$HOSTNAME${NC}"
 echo -e "${YELLOW}Press Ctrl+C to stop the tunnel${NC}"
 TUNNEL_ORIGIN_CERT="$CREDENTIALS_DIR"/cert.pem cloudflared tunnel --config="$CONFIG_FILE" run

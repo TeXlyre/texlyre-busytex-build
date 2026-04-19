@@ -68,14 +68,14 @@ jobs:
             make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexnativereleasetag }} download-native
           fi
 
-      - name: Build TeXLive full tree
+      - name: Build TeX Live full tree
         env:
           MAKEFLAGS: ${{ env.MAKE_PARALLELISM }}
         run: |
           make source/texmfrepo.txt
           make build/texlive-full.txt
 
-      - name: Start TeXLive server
+      - name: Start TeX Live server
         run: |
           TEXMF_ROOT=$PWD/build/texlive-full/texmf-dist \
           PORT=8070 \
@@ -96,7 +96,7 @@ jobs:
           bash scripts/bench_wasm.sh dist-wasm/busytex.js dist-wasm/texlive-basic.js ${{ env.BENCHSETTARS }} \
             | tee bench_wasm_results.log
 
-      - name: Stop TeXLive server
+      - name: Stop TeX Live server
         if: always()
         run: kill $(cat /tmp/texlive_server.pid) 2>/dev/null || true
 

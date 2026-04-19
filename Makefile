@@ -223,7 +223,7 @@ source/texlive.txt source/expat.txt source/fontconfig.txt:
 source/texmfrepo.txt:
 	mkdir -p $(basename $@)
 	@if [ ! -f source/texlive2026.iso ]; then \
-		echo "Downloading TeXLive 2026 ISO (6+ GB)..."; \
+		echo "Downloading TeX Live 2026 ISO (6+ GB)..."; \
 		curl -L -o source/texlive2026.iso $(URL_texlive_full_iso) || wget -O source/texlive2026.iso $(URL_texlive_full_iso); \
 	fi
 	bsdtar -xf source/texlive2026.iso -C $(basename $@)
