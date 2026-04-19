@@ -254,7 +254,7 @@ class BusytexPipeline {
             'run LaTeX again',
         ];
 
-        this.max_tex_passes = 5;
+        this.max_tex_passes = 3;
 
         this.env = {
             TEXMFDIST: this.dir_texmfdist,
