@@ -1,4 +1,5 @@
 *.log
+*.env
 *.aux
 *.bbl
 *.blg
@@ -13,3 +14,4 @@ example/bibtex/
 build/
 source/
 dist-wasm/
+dist-native/
