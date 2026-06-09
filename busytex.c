@@ -88,6 +88,7 @@ int main(int argc, char *argv[])
     {
         setenvjoin("TEXMFDIST", "/texlive/texmf-dist");
         setenvjoin("TEXMFVAR", "/texlive/texmf-dist/texmf-var");
+        setenvjoin("TEXMFCACHE", "/texlive/texmf-dist/texmf-var");
         setenvjoin("TEXMFCNF", "/texlive/texmf-dist/web2c");
         setenvjoin("FONTCONFIG_PATH", "/texlive/");
         setenvjoin("FONTCONFIG_FILE", "/texlive/fonts.conf");
