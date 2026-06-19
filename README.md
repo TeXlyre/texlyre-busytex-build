@@ -68,6 +68,9 @@ cd ..
 ```
 
 ### Build
+> [!WARNING]
+> Building with Ubuntu > 26 requires the explicit setting of the cmake version 
+> `export CMAKE_POLICY_VERSION_MINIMUM=3.5`
 
 ```shell
 git clone https://github.com/TeXlyre/texlyre-busytex-build
