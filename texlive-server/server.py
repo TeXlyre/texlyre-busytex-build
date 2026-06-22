@@ -15,20 +15,43 @@ elif api_origins:
     CORS(app, resources={r"/*": {"origins": [o.strip() for o in api_origins.split(',')]}})
 
 KPSE_EXTENSIONS = {
+    0:  ['.gf'],
+    1:  ['.pk'],
     3:  ['.tfm'],
     4:  ['.afm'],
+    5:  ['.base'],
     6:  ['.bib'],
     7:  ['.bst'],
+    8:  ['.cnf'],
     10: ['.fmt'],
     11: ['.map'],
+    13: ['.mf'],
+    16: ['.mp'],
+    19: ['.ocp'],
+    20: ['.ofm', '.tfm'],
+    21: ['.opl'],
+    22: ['.otp'],
+    23: ['.ovf', '.vf'],
+    24: ['.ovp'],
     26: ['.tex', '.sty', '.cls', '.fd', '.def', '.cfg', '.ltx', '.dtx', '.ldf', '.clo', '.bbx', '.cbx', '.lbx', '.dbx', '.rtx'],
+    28: ['.pool'],
+    30: ['.pro'],
     32: ['.pfa', '.pfb'],
     33: ['.vf'],
-    35: ['.ttf', '.ttc'],
-    43: ['.enc'],
-    44: ['.cmap'],
-    46: ['.otf'],
-    39: ['.lua'],
+    35: ['.ist'],
+    36: ['.ttf', '.ttc', '.dfont'],
+    44: ['.enc'],
+    46: ['.sfd'],
+    47: ['.otf'],
+    49: ['.lig'],
+    50: ['.lua', '.pl', '.rb', '.py'],
+    51: ['.lua', '.luc', '.luatex', '.texlua', '.tlu'],
+    52: ['.fea'],
+    53: ['.cid', '.cidmap'],
+    54: ['.mlbib', '.bib'],
+    55: ['.mlbst', '.bst'],
+    57: ['.ris'],
+    58: ['.bltxml'],
 }
 
 _SAFE_NAME = re.compile(r'[^a-zA-Z0-9._-]')
@@ -45,23 +68,34 @@ def init_redis(redis_url):
         redis_client = None
 
 
+_stem_index = {}
+
+
 def build_index(texmf_root):
     index = {}
+    stems = {}
     for dirpath, _, filenames in os.walk(texmf_root):
         for fname in filenames:
             key = fname.lower()
             if key not in index:
                 index[key] = os.path.join(dirpath, fname)
-    return index
+            stem = os.path.splitext(key)[0]
+            stems.setdefault(stem, []).append(key)
+    return index, stems
 
 
 def get_index():
-    global _file_index
+    global _file_index, _stem_index
     if not _file_index:
-        texmf_root = os.path.abspath(os.environ.get('TEXMF_ROOT', '../build/texlive-full/texmf-dist'))
+        texmf_root = os.path.abspath(
+            os.environ.get(
+                'TEXMF_ROOT',
+                '../build/texlive-full/texmf-dist'
+            )
+        )
         if os.path.isdir(texmf_root):
             app.logger.info(f'Indexing {texmf_root}')
-            _file_index = build_index(texmf_root)
+            _file_index, _stem_index = build_index(texmf_root)
             app.logger.info(f'Indexed {len(_file_index)} files')
         else:
             app.logger.warning(f'TEXMF_ROOT not found: {texmf_root}')
@@ -69,34 +103,54 @@ def get_index():
 
 
 def find_file(name, fmt):
-    cached = None
     cache_key = f'{fmt}:{name}'
+    expected = KPSE_EXTENSIONS.get(fmt, [])
+    key = name.lower()
+
+    def cached_result_matches(path):
+        basename = os.path.basename(path).lower()
+
+        # Exact requested filename is always valid.
+        if basename == key:
+            return True
+
+        # Otherwise this must be a legitimate extensionless stem fallback.
+        if not expected:
+            return False
+
+        stem, ext = os.path.splitext(basename)
+        return stem == key and ext in expected
 
     if redis_client:
         try:
             cached = redis_client.get(cache_key)
             if cached:
                 path = cached.decode()
-                if os.path.isfile(path):
+                if os.path.isfile(path) and cached_result_matches(path):
                     return path
         except Exception:
             pass
 
     index = get_index()
-    key = name.lower()
+
+    # Exact filenames are always accepted, regardless of extension.
     result = index.get(key)
 
-    if result is None:
-        for ext in KPSE_EXTENSIONS.get(fmt, []):
-            if not key.endswith(ext):
-                result = index.get(key + ext)
+    # Only extensionless fallback is constrained by kpse format.
+    if result is None and expected:
+        candidates = _stem_index.get(key, [])
+
+        for ext in expected:
+            for cand in candidates:
+                if os.path.splitext(cand)[1] != ext:
+                    continue
+
+                result = index.get(cand)
                 if result:
                     break
 
-    if result is None and fmt == 26:
-        # format 26 is the generic tex input search; try the bare name against
-        # the full index regardless of extension to catch .rtx, .bst, etc.
-        result = index.get(key)
+            if result:
+                break
 
     if result and redis_client:
         try:
