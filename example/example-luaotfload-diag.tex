@@ -1,0 +1,38 @@
+\directlua{
+local function show(label, value)
+  texio.write_nl("BUSYTEX-DIAG " .. label .. "=" .. tostring(value))
+end
+local function try(label, fn)
+  local ok, value = pcall(fn)
+  if ok then show(label, value) else show(label, "ERROR: " .. tostring(value)) end
+end
+try("luaotfload_version", function() return luaotfload and luaotfload.version end)
+try("cache_dir", function() return config.luaotfload.paths.cache_dir end)
+try("index_path_lua", function() return config.luaotfload.paths.index_path_lua end)
+try("index_path_luc", function() return config.luaotfload.paths.index_path_luc end)
+try("location_precedence", function() return table.concat(config.luaotfload.db.location_precedence, ",") end)
+try("conf_via_kpse", function() return kpse.find_file("luaotfload.conf") end)
+try("TEXMFVAR", function() return kpse.var_value("TEXMFVAR") end)
+try("TEXMFCACHE", function() return kpse.var_value("TEXMFCACHE") end)
+try("TEXMFCACHE_env", function() return os.getenv("TEXMFCACHE") end)
+local generated = "/texlive/texmf-dist/texmf-var/luatex-cache/generic/names/"
+try("generated_gz_exists", function() return lfs.isfile(generated .. "luaotfload-names.lua.gz") end)
+try("generated_lua_exists", function() return lfs.isfile(generated .. "luaotfload-names.lua") end)
+try("db_base_lmroman", function()
+  return fonts.names.data.files.base.texmf["lmroman10-regular.otf"]
+end)
+try("db_bare_lmroman", function()
+  return fonts.names.data.files.bare.texmf["lmroman10-regular"]
+end)
+try("db_mapping_sample", function()
+  local entry = fonts.names.data.mappings[1]
+  return tostring(entry.filename) .. " | " .. tostring(entry.location) .. " | " .. tostring(entry.familyname)
+end)
+try("index_dir_matches_generated", function()
+  return string.sub(tostring(config.luaotfload.paths.index_path_lua), 1, string.len(generated)) == generated
+end)
+}
+\documentclass{article}
+\begin{document}
+Diagnostic run.
+\end{document}
