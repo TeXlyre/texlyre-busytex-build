@@ -6,7 +6,7 @@ on:
       busytexreleasetag:
         description: 'busytex native release tag'
         required: true
-        default: build_native_25cb7a9ae6f588003d82857b956e4965bea9a753_24562298930_1
+        default: build_native_65ee595ef82aa3dd324db210cd0d2827cc0d426e_31380263152_1
       privaterepo:
         description: 'Use authenticated download (required for private repos)'
         type: boolean
@@ -51,7 +51,9 @@ jobs:
           df -h
 
       - name: Install Prerequisites
-        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries zstd
+        run: |
+          sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries zstd
+          python3 -m pip install --break-system-packages fonttools
 
       - uses: actions/checkout@v4
 
@@ -72,6 +74,15 @@ jobs:
         env:
           MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
         run: make build/versions.txt build/texlive-full.txt
+
+      - name: Check font assets
+        run: |
+          set -euo pipefail
+          sh scripts/check_font_assets.sh full build/texlive-full/texmf-dist
+          mkdir -p build/fontassets
+          cp build/texlive-full/texmf-dist/texmf-var/fonts/map/pdftex/updmap/pdftex.map build/fontassets/
+          cp build/texlive-full/texmf-dist/texmf-var/luatex-cache/generic/names/luaotfload-names.lua.gz build/fontassets/
+          ls -lh build/fontassets
 
       - name: Clean-up texmf sources and ISO
         run: |
@@ -128,6 +139,8 @@ jobs:
             build/texlive-full.txt
             build/texlive-full.profile
             build/versions.txt
+            build/fontassets/pdftex.map
+            build/fontassets/luaotfload-names.lua.gz
           )
 
           if gh release view "$tag" > /dev/null 2>&1; then

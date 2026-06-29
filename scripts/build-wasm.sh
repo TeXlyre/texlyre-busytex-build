@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-NATIVE_RELEASE="build_native_25cb7a9ae6f588003d82857b956e4965bea9a753_24562298930_1"
+NATIVE_RELEASE="build_native_65ee595ef82aa3dd324db210cd0d2827cc0d426e_31380263152_1"
 URLRELEASE="https://github.com/TeXlyre/texlyre-busytex-build/releases/download/${NATIVE_RELEASE}"
 EMSCRIPTEN_VERSION="5.0.4"
 

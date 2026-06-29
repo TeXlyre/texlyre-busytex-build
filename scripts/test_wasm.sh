@@ -3,11 +3,12 @@
 # Usage: ./test_wasm.sh <path-to-busytex.js> <path-to-texlive-basic.js>
 set -euo pipefail
 
-BUSYTEX_JS=${1:?Usage: $0 <busytex.js> <texlive-basic.js>}
-TEXLIVE_JS=${2:?Usage: $0 <busytex.js> <texlive-basic.js>}
+BUSYTEX_JS=${1:?Usage: $0 <busytex.js> <texlive-basic.js> [texlive-recommended.js]}
+TEXLIVE_JS=${2:?Usage: $0 <busytex.js> <texlive-basic.js> [texlive-recommended.js]}
+TEXLIVE_EXTRA_JS=${3:-}
 SCRIPT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
-node - "$SCRIPT_DIR" "$BUSYTEX_JS" "$TEXLIVE_JS" << 'JSEOF'
+node - "$SCRIPT_DIR" "$BUSYTEX_JS" "$TEXLIVE_JS" "$TEXLIVE_EXTRA_JS" << 'JSEOF'
 const fs   = require('fs');
 const path = require('path');
 
@@ -15,6 +16,7 @@ const SCRIPT_DIR   = process.argv[2];
 const BUSYTEX_JS   = path.resolve(process.argv[3]);
 const TEXLIVE_JS   = path.resolve(process.argv[4]);
 const BUSYTEX_WASM = BUSYTEX_JS.replace('.js', '.wasm');
+const TEXLIVE_ALL  = [TEXLIVE_JS].concat(process.argv[5] ? [path.resolve(process.argv[5])] : []);
 
 global.self = global;
 global.indexedDB = undefined;
@@ -33,9 +35,21 @@ WebAssembly.compileStreaming = async (fetchPromise) => {
     return WebAssembly.compile(buf);
 };
 
+const REMOTE_DIR = process.env.BUSYTEX_REMOTE_DIR || '';
+
 global.XMLHttpRequest = class {
-    open(method, url) { this._url = url; }
-    send() { this.status = 404; this.response = null; }
+    open(method, url) { this._url = String(url); }
+    send() {
+        this.status = 404;
+        this.response = null;
+        if (!REMOTE_DIR) return;
+        const name = decodeURIComponent(this._url.split('/').pop());
+        const file = path.join(REMOTE_DIR, name);
+        if (!name || name.includes('..') || !fs.existsSync(file)) return;
+        const data = fs.readFileSync(file);
+        this.status = 200;
+        this.response = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    }
     get responseType() { return this._responseType || ''; }
     set responseType(v) { this._responseType = v; }
     set timeout(_) {}
@@ -61,15 +75,43 @@ async function run() {
         { path: 'example.bib', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example.bib'), 'utf8') },
     ];
 
-    const drivers = [
-        { name: 'pdflatex',   driver: 'pdftex_bibtex8' },
-        { name: 'xelatex',    driver: 'xetex_bibtex8_dvipdfmx' },
-        { name: 'luahblatex', driver: 'luahbtex_bibtex8' },
+    const fontFiles = [
+        { path: 'example-fontspec.tex', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example-fontspec.tex'), 'utf8') },
     ];
+
+    const remoteFiles = [
+        { path: 'example-remotefont.tex', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example-remotefont.tex'), 'utf8') },
+    ];
+
+    const drivers = [
+        { name: 'pdflatex',   driver: 'pdftex_bibtex8',           files: texFiles,  main: 'example.tex' },
+        { name: 'xelatex',    driver: 'xetex_bibtex8_dvipdfmx',   files: texFiles,  main: 'example.tex' },
+        { name: 'luahblatex', driver: 'luahbtex_bibtex8',         files: texFiles,  main: 'example.tex' },
+        { name: 'xelatex fontspec',    driver: 'xetex_bibtex8_dvipdfmx', files: fontFiles, main: 'example-fontspec.tex' },
+        { name: 'luahblatex fontspec', driver: 'luahbtex_bibtex8',       files: fontFiles, main: 'example-fontspec.tex' },
+    ];
+
+    const diagFiles = [
+        { path: 'example-luaotfload-diag.tex', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example-luaotfload-diag.tex'), 'utf8') },
+    ];
+
+    drivers.push({ name: 'luahblatex diagnose', driver: 'luahbtex_bibtex8',
+                   files: diagFiles, main: 'example-luaotfload-diag.tex', diagnose: true });
+
+    if (REMOTE_DIR)
+        drivers.push({ name: 'xelatex remote font', driver: 'xetex_bibtex8_dvipdfmx',
+                       files: remoteFiles, main: 'example-remotefont.tex', remote: 'http://busytex.invalid/remote' });
+
+    const luaRemoteTex = REMOTE_DIR ? path.join(REMOTE_DIR, 'example-luaotfload-remote.tex') : '';
+    if (luaRemoteTex && fs.existsSync(luaRemoteTex))
+        drivers.push({ name: 'luahblatex remote font', driver: 'luahbtex_bibtex8',
+                       files: [{ path: 'example-luaotfload-remote.tex', contents: fs.readFileSync(luaRemoteTex, 'utf8') }],
+                       main: 'example-luaotfload-remote.tex', remote: 'http://busytex.invalid/remote',
+                       optional: true });
 
     let allOk = true;
 
-    for (const { name, driver } of drivers) {
+    for (const { name, driver, files, main, remote, diagnose, optional } of drivers) {
         _consoleLog('\n--- ' + name + ' ---');
         try {
             console.log   = () => {};
@@ -78,8 +120,8 @@ async function run() {
             const pipeline = new BusytexPipeline(
                 BUSYTEX_JS,
                 BUSYTEX_WASM,
-                [TEXLIVE_JS],
-                [TEXLIVE_JS],
+                TEXLIVE_ALL,
+                TEXLIVE_ALL,
                 [],
                 () => {},
                 () => {},
@@ -89,10 +131,25 @@ async function run() {
 
             await pipeline.on_initialized_promise;
 
-            const result = await pipeline.compile(texFiles, 'example.tex', false, false, false, BusytexPipeline.VerboseSilent, driver, []);
+            const result = await pipeline.compile(files, main, false, null, false, false, BusytexPipeline.VerboseSilent, driver, [], remote || '');
 
             console.log   = _consoleLog;
             console.error = _consoleError;
+
+            if (diagnose) {
+                const lines = (result.log || '').split('\n').filter(line => line.includes('BUSYTEX-DIAG'));
+                if (lines.length)
+                    for (const line of lines) _consoleLog(line.trim());
+                else
+                    _consoleLog('no diagnostic output, exit=' + result.exit_code + '\n' + (result.log || '').slice(-1500));
+                continue;
+            }
+
+            if (optional && (result.exit_code !== 0 || !result.pdf)) {
+                _consoleError('UNPROVEN: ' + name + ' (exit=' + result.exit_code + ')');
+                _consoleError((result.log || '').slice(-1200));
+                continue;
+            }
 
             if (result.exit_code !== 0 || !result.pdf) {
                 _consoleError('FAIL: ' + name + ' (exit=' + result.exit_code + ', pdf=' + !!result.pdf + ')');
