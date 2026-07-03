@@ -715,7 +715,7 @@ dist-native-full: build/native/busytex
 
 download-native:
 	mkdir -p source build/native build/native/texlive/texk/web2c/web2c
-	wget  -P build/native                                 -nc $(addprefix $(URLRELEASE)/,$(BUSYTEX_BIN) busytex.tar)
+	wget  -P build/native                                 -nc $(addprefix $(URLRELEASE)/,busytex busytex.tar)
 	wget  -P build/native/texlive/texk/web2c              -nc $(addprefix $(URLRELEASE)/,$(BUSYTEX_TEXBIN))
 	wget  -P build/native/texlive/texk/web2c/web2c        -nc $(addprefix $(URLRELEASE)/,$(BUSYTEX_WEB2CBIN))
 	chown $(shell whoami) $(BUSYTEX_native) $(BUSYWEB2C_native); chmod +x  $(BUSYWEB2C_native) $(BUSYTEX_native); file $(BUSYWEB2C_native) $(BUSYTEX_native); $(BUSYTEX_native);
