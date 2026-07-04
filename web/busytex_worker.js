@@ -1,4 +1,5 @@
 importScripts('busytex_pipeline.js');
+importScripts('busytex_pipeline_shell_escape_patch.js');
 
 self.pipeline = null;
 
