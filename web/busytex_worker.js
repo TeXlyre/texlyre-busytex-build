@@ -2,7 +2,7 @@ importScripts('busytex_pipeline.js');
 
 self.pipeline = null;
 
-onmessage = async ({ data: { files, main_tex_path, bibtex, makeindex, rerun, busytex_wasm, busytex_js, preload_data_packages_js, data_packages_js, texmf_local, preload, verbose, driver, remote_endpoint, read_project_files, write_texlive_remote_files, write_texlive_remote_misses } }) => {
+onmessage = async ({ data: { files, main_tex_path, bibtex, makeindex, rerun, busytex_wasm, busytex_js, preload_data_packages_js, data_packages_js, texmf_local, preload, verbose, driver, remote_endpoint, shell_escape, load_shell_handler_script, read_project_files, write_texlive_remote_files, write_texlive_remote_misses } }) => {
     // TODO: cache data packages from here? https://developer.mozilla.org/en-US/docs/Web/API/Cache
 
     if (busytex_wasm && busytex_js && preload_data_packages_js) {
@@ -11,6 +11,15 @@ onmessage = async ({ data: { files, main_tex_path, bibtex, makeindex, rerun, bus
         }
         catch (err) {
             postMessage({ exception: 'Exception during initialization: ' + err.toString() + '\nStack:\n' + err.stack });
+        }
+    }
+    else if (load_shell_handler_script) {
+        try {
+            importScripts(load_shell_handler_script);
+            postMessage({ shell_handler_script_loaded: load_shell_handler_script });
+        }
+        catch (err) {
+            postMessage({ exception: 'Exception loading shell handler script: ' + err.toString() + '\nStack:\n' + err.stack });
         }
     }
     else if (read_project_files && self.pipeline) {
@@ -41,7 +50,7 @@ onmessage = async ({ data: { files, main_tex_path, bibtex, makeindex, rerun, bus
     }
     else if (files && self.pipeline) {
         try {
-            postMessage(await self.pipeline.compile(files, main_tex_path, bibtex, makeindex, rerun, verbose, driver, data_packages_js, remote_endpoint))
+            postMessage(await self.pipeline.compile(files, main_tex_path, bibtex, makeindex, rerun, verbose, driver, data_packages_js, remote_endpoint, shell_escape === true))
         }
         catch (err) {
             postMessage({ exception: 'Exception during compilation: ' + err.toString() + '\nStack:\n' + err.stack });
