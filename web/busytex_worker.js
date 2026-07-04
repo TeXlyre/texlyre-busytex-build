@@ -16,6 +16,8 @@ onmessage = async ({ data: { files, main_tex_path, bibtex, makeindex, rerun, bus
     else if (load_shell_handler_script) {
         try {
             importScripts(load_shell_handler_script);
+            if (self.handler_ready)
+                await self.handler_ready;
             postMessage({ shell_handler_script_loaded: load_shell_handler_script });
         }
         catch (err) {
