@@ -1,0 +1,120 @@
+name: build-biber-wasm
+
+# Builds biber as a standalone wasm module and publishes biber.js / biber.wasm
+# as a release, the way build-native does for the native binaries. biber changes
+# rarely and the job compiles perl twice (host + wasm), so it is kept out of
+# build-wasm, which consumes the published artifact instead.
+
+on:
+  workflow_dispatch:
+    inputs:
+      perlversion:
+        description: 'perl version to cross-compile'
+        required: true
+        default: '5.38.2'
+      biberversion:
+        description: 'biber release tag (without the v)'
+        required: true
+        default: '2.22'
+
+env:
+  EMSCRIPTEN_VERSION: 5.0.4
+  PERL_VERSION: ${{ github.event.inputs.perlversion }}
+  BIBER_VERSION: ${{ github.event.inputs.biberversion }}
+
+jobs:
+
+  build-biber-wasm:
+    runs-on: ubuntu-24.04
+    steps:
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/lib/jvm
+          df -h
+
+      - uses: actions/checkout@v4
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl xz-utils autoconf automake libtool pkg-config
+          # Supplies biber's pure-perl dependency closure in /usr/share/perl5.
+          sudo apt-get install -y biber
+          # The interpreter bakes its prefix into @INC, so it is built at the
+          # same path the packaged tree is mounted at.
+          sudo mkdir -p /opt/perl-wasm
+          sudo chown "$(id -u):$(id -g)" /opt/perl-wasm
+          
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v13
+        with:
+          version: ${{env.EMSCRIPTEN_VERSION}}
+
+      - name: Check toolchain
+        run: |
+          emcc --version
+          emar --version
+
+      - name: Build biber wasm
+        env:
+          # The host ar produces archives the wasm linker rejects, and llvm-ar
+          # is not on PATH after emsdk activation.
+          AR: emar
+        run: make wasm-biber
+
+      - name: Smoke test
+        run: |
+          cd build/wasm/biber
+          cat > smoke.bib <<'BIB'
+          @article{knuth1984,
+            author  = {Knuth, Donald E.},
+            title   = {Literate Programming},
+            journal = {The Computer Journal},
+            year    = {1984},
+          }
+          BIB
+          node -e '
+            const fs = require("fs");
+            const biber = require("./biber.js");
+            const run = async () => {
+                const xs = await biber({ noInitialRun: true });
+                if (xs.callMain(["-e", "use XML::LibXML; use Text::BibTeX; use Unicode::GCString; print qq(xs ok\n)"]))
+                    throw new Error("xs check failed");
+                const tool = await biber({ noInitialRun: true });
+                tool.FS.writeFile("/home/web_user/biber/smoke.bib", fs.readFileSync("smoke.bib", "utf8"));
+                if (tool.callMain(["/opt/perl-wasm/bin/biber", "--tool", "--output-format=bibtex", "--nolog", "smoke.bib"]))
+                    throw new Error("biber --tool failed");
+                if (!tool.FS.analyzePath("/home/web_user/biber/smoke_bibertool.bib").exists)
+                    throw new Error("biber produced no output");
+                console.log("biber produced output");
+            };
+            run().catch(err => { console.error(err); process.exit(1); });
+          '
+
+      - name: Package
+        run: |
+          mkdir -p dist-biber
+          cp build/wasm/biber/biber.js build/wasm/biber/biber.wasm build/wasm/biber/biber.data web/busytex_biber.js dist-biber/
+          tar -czf biber-wasm.tar.gz -C dist-biber .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: biber-wasm
+          path: |
+            build/wasm/biber/biber.js
+            build/wasm/biber/biber.wasm
+            build/wasm/biber/biber.data
+            web/busytex_biber.js
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=build_biber_wasm_${GITHUB_SHA}_${GITHUB_RUN_ID}_${GITHUB_RUN_NUMBER}
+          gh release create "$tag" --title "$tag" --notes "biber $BIBER_VERSION on perl $PERL_VERSION, wasm" \
+            build/wasm/biber/biber.js \
+            build/wasm/biber/biber.wasm \
+            build/wasm/biber/biber.data \
+            web/busytex_biber.js \
+            biber-wasm.tar.gz
