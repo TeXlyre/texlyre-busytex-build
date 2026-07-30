@@ -1,0 +1,145 @@
+name: build-texlive-full
+
+on:
+  workflow_dispatch:
+    inputs:
+      busytexreleasetag:
+        description: 'busytex native release tag'
+        required: true
+        default: build_native_25cb7a9ae6f588003d82857b956e4965bea9a753_24562298930_1
+      privaterepo:
+        description: 'Use authenticated download (required for private repos)'
+        type: boolean
+        required: false
+        default: false
+      releasetag:
+        description: 'Release tag to publish the texmf-dist archive under'
+        required: true
+        default: texlive-full-2026
+      compression:
+        description: 'zstd compression level'
+        required: false
+        default: '19'
+
+env:
+  MAKE_PARALLELISM: -j4
+
+permissions:
+  contents: write
+
+jobs:
+
+  build-texlive-full:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/share/swift \
+            /usr/local/.ghcup \
+            /usr/lib/jvm \
+            /usr/share/gradle-* \
+            /usr/share/miniconda \
+            /usr/local/share/chromium \
+            /usr/local/share/powershell
+          sudo docker image prune -af 2>/dev/null || true
+          df -h
+
+      - name: Install Prerequisites
+        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries zstd
+
+      - uses: actions/checkout@v4
+
+      - name: Download native binaries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.privaterepo }}" = "true" ]; then
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexreleasetag }} download-native-auth
+          else
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.busytexreleasetag }} download-native
+          fi
+
+      - name: Download TexLive Full
+        run: make source/texmfrepo.txt
+
+      - name: Install TexLive full scheme
+        env:
+          MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
+        run: make build/versions.txt build/texlive-full.txt
+
+      - name: Clean-up texmf sources and ISO
+        run: |
+          rm -rf source/texmfrepo source/texlive2026.iso source/texlive2026.iso.*
+          rm -f build/texlive-full.tar.gz
+          df -h
+
+      - name: Pack texmf-dist
+        run: |
+          set -euo pipefail
+          test -d build/texlive-full/texmf-dist/tex
+          chown "$(whoami)" -R build/texlive-full
+          du -sh build/texlive-full/texmf-dist
+          tar -C build/texlive-full -cf - texmf-dist \
+            | zstd -T0 -${{ github.event.inputs.compression }} -o texmf-dist.tar.zst
+          sha256sum texmf-dist.tar.zst > texmf-dist.tar.zst.sha256
+          ls -lh texmf-dist.tar.zst
+
+      - name: Check asset size
+        run: |
+          set -euo pipefail
+          bytes=$(stat -c %s texmf-dist.tar.zst)
+          echo "texmf-dist.tar.zst is $((bytes / 1024 / 1024)) MB"
+          if [ "$bytes" -ge 2147483648 ]; then
+            echo "Asset exceeds the 2 GB release limit, split it or raise compression" >&2
+            exit 1
+          fi
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag='${{ github.event.inputs.releasetag }}'
+
+          cat > release-notes.md << 'NOTES'
+          TeX Live 2026 `texmf-dist` tree, installed with `scheme-full` and pruned of
+          `doc/`, `source/`, `scripts/`, `bin/` and `tlpkg/`.
+
+          The archive has `texmf-dist` as its single top-level directory, so consumers
+          extract it with `--strip-components=1`. Used by the `texlive2026-server`
+          service in texlyre-infrastructure via `TEXMF_URL`.
+          NOTES
+
+          {
+            echo
+            echo "Built from ${{ github.sha }}"
+            echo "Native binaries: ${{ github.event.inputs.busytexreleasetag }}"
+          } >> release-notes.md
+
+          assets=(
+            texmf-dist.tar.zst
+            texmf-dist.tar.zst.sha256
+            build/texlive-full.txt
+            build/texlive-full.profile
+            build/versions.txt
+          )
+
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" "${assets[@]}" --clobber
+            gh release edit "$tag" --notes-file release-notes.md
+          else
+            gh release create "$tag" -t "TeX Live 2026 texmf-dist" \
+              --notes-file release-notes.md --latest=false "${assets[@]}"
+          fi
+
+          {
+            echo "Published \`$tag\`"
+            echo
+            echo "    TEXMF_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$tag/texmf-dist.tar.zst"
+          } >> "$GITHUB_STEP_SUMMARY"
