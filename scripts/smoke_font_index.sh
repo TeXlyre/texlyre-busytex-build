@@ -24,7 +24,7 @@ esac
 
 if ! $BUSYTEX $XETEX_APPLET --version > /dev/null 2>&1; then
     echo "smoke-fontindex: cannot run [$BUSYTEX $XETEX_APPLET], output follows" >&2
-    $BUSYTEX $XETEX_APPLET --version >&2 2>&1 || true
+    $BUSYTEX $XETEX_APPLET --version 2>&1 || true
     exit 1
 fi
 
@@ -77,6 +77,7 @@ run_case() {
     dir=$1
     cd "$ROOT/$dir"
     FONTCONFIG_FILE="$ROOT/$WORK/fontconfig/fonts.conf" \
+    TEXINPUTS=. TEXFONTS=. OPENTYPEFONTS=. TTFONTS=. TYPE1FONTS=. \
         $BUSYTEX $XETEX_APPLET -ini -etex -no-pdf -interaction=nonstopmode test.tex \
         > run.out 2>&1 || true
     cd "$ROOT"
@@ -92,8 +93,8 @@ run_case() {
 }
 
 report_case() {
-    echo "smoke-fontindex: engine output from $1" >&2
-    LC_ALL=C sed -n '1,40p' "$1/run.out" >&2 2>/dev/null || true
+    echo "smoke-fontindex: engine output from $1"
+    LC_ALL=C sed -n '1,40p' "$1/run.out" 2>/dev/null || true
 }
 
 echo "smoke-fontindex: requesting \"$FONTNAME\" with fontconfig starved"
@@ -105,18 +106,18 @@ echo "smoke-fontindex: without index -> $CONTROL"
 echo "smoke-fontindex: with index    -> $ACTUAL"
 
 if [ "$CONTROL" = "missing" ] || [ "$ACTUAL" = "missing" ]; then
-    echo "smoke-fontindex: FAIL, the engine produced no log" >&2
+    echo "smoke-fontindex: FAIL, the engine produced no log"
     report_case "$WORK/without-index"
     exit 1
 fi
 
 if [ "$CONTROL" != "unresolved" ]; then
-    echo "smoke-fontindex: FAIL, the control run resolved the font without the index" >&2
+    echo "smoke-fontindex: FAIL, the control run resolved the font without the index"
     exit 1
 fi
 
 if [ "$ACTUAL" != "resolved" ]; then
-    echo "smoke-fontindex: FAIL, the index did not resolve the font" >&2
+    echo "smoke-fontindex: FAIL, the index did not resolve the font"
     report_case "$WORK/with-index"
     exit 1
 fi
