@@ -13,7 +13,10 @@ jobs:
     steps:
       - name: Install Prerequisites including github.com/cli/cli
         #run: sudo apt-get install xz-utils strace cmake unzip gh gperf
-        run:  apk add --update --no-cache libnsl libnsl-dev build-base coreutils cmake bash git xz wget perl gperf p7zip python3 github-cli strace libarchive-tools curl && ln -sf python3 /usr/bin/python
+        run:  |
+          apk add --update --no-cache libnsl libnsl-dev build-base coreutils cmake bash git xz wget perl gperf p7zip python3 py3-pip github-cli strace libarchive-tools curl && ln -sf python3 /usr/bin/python
+          apk add --no-cache font-dejavu || apk add --no-cache ttf-dejavu
+          python3 -m pip install --break-system-packages fonttools || python3 -m pip install fonttools
 
       - uses: actions/checkout@v4
             
@@ -29,6 +32,9 @@ jobs:
       
       - name: Smoke native
         run:  make smoke-native
+
+      - name: Smoke font index
+        run:  make smoke-fontindex
         
       - name: Create Release
         env:

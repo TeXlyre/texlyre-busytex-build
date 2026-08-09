@@ -229,7 +229,8 @@ source/texmfrepo.txt:
 	bsdtar -xf source/texlive2026.iso -C $(basename $@)
 	find $(basename $@) > $@
 
-source/texlive.patched: source/texlive.txt
+source/texlive.patched: source/texlive.txt scripts/patch_xetex_font_index.py
+	$(PYTHON) scripts/patch_xetex_font_index.py --texlive-source source/texlive
 	touch $@
 
 build/%/texlive.configured: source/texlive.patched
@@ -363,8 +364,9 @@ build/%/busytex build/%/busytex.js:
 	mkdir -p $(dir $@)
 	$(CC_$*)  -o    $(basename $@).o -c busytex.c  $(OPTS_BUSYTEX_COMPILE_$*) $(CFLAGS_OPT_$*) -I$(abspath build/$*/texlive/libs/icu/include)
 	$(CC_$*)  -o    build/$*/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_$*)
+	$(CXX_$*) -o    build/$*/font_index.o -c font_index.cpp $(CFLAGS_OPT_$*)
 # 	$(CXX_$*) -o $@ $(basename $@).o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
-	$(CXX_$*) -o $@ $(basename $@).o build/$*/kpse_remote.o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
+	$(CXX_$*) -o $@ $(basename $@).o build/$*/kpse_remote.o build/$*/font_index.o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
 	tar -cf $(basename $@).tar build/$*/texlive/texk/web2c/*.c
 
 # Minimal pdfTeX-only build
@@ -387,8 +389,9 @@ build/wasm/xetex.js:
 	mkdir -p $(dir $@)
 	$(CC_wasm) -o build/wasm/xetex.o -c busytex.c -DBUSYTEX_XETEX -DBUSYTEX_XDVIPDFMX $(CFLAGS_OPT_wasm)
 	$(CC_wasm) -o build/wasm/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_wasm)
+	$(CXX_wasm) -o build/wasm/font_index.o -c font_index.cpp $(CFLAGS_OPT_wasm)
 # 	$(CXX_wasm) -o $@ build/wasm/xetex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
-	$(CXX_wasm) -o $@ build/wasm/xetex.o build/wasm/kpse_remote.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
+	$(CXX_wasm) -o $@ build/wasm/xetex.o build/wasm/kpse_remote.o build/wasm/font_index.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
 
 build/native/busytexextra: build/native/busytex build/texlive-extra.txt 
 	$(PYTHON) packfs.py -i build/texlive-extra/ -o packfs.h --prefix=/texlive --ld=$(LD_native) --exclude '\.a|\.so|\.pod|\.ld|\.h|\.log'
@@ -532,6 +535,7 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luatex/*.fmt \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luatex/*.log
 	# --------------------------------------------------------------------------------
+	$(if $(filter full,$*),$(PYTHON) scripts/build_font_index.py --texmf-dist $(basename $@)/texmf-dist --output $(basename $@)/texmf-dist/busytex-fontindex.txt)
 	mkdir -p $(dir $@)
 	find $(basename $@) > $@
 	tar -czf $(basename $@).tar.gz $(basename $@)
@@ -666,6 +670,9 @@ build/versions.txt:
 	echo emscripten: $(EMSCRIPTEN_VERSION)                             >> $@
 
 .PHONY: smoke-native
+smoke-fontindex: build/native/busytex
+	sh scripts/smoke_font_index.sh $(FONTS_DIR)
+
 smoke-native: build/native/busytex
 	-$(LDD_native) $(BUSYTEX_native)
 	$(BUSYTEX_native)

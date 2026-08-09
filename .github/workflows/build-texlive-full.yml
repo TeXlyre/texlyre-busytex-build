@@ -51,7 +51,9 @@ jobs:
           df -h
 
       - name: Install Prerequisites
-        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries zstd
+        run: |
+          sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries zstd
+          python3 -m pip install --break-system-packages fonttools
 
       - uses: actions/checkout@v4
 
