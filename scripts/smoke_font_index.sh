@@ -3,7 +3,8 @@
 # a by-name lookup must fail without the index and succeed with it.
 set -eu
 
-XETEX_CMD=${XETEX_CMD:-build/native/busytex xetex}
+BUSYTEX=${BUSYTEX:-build/native/busytex}
+XETEX_APPLET=${XETEX_APPLET-xetex}
 PYTHON=${PYTHON:-python3}
 FONTS_DIR=${1:-/usr/share/fonts}
 WORK=${WORK:-build/smoke-fontindex}
@@ -15,6 +16,18 @@ if [ ! -d "$FONTS_DIR" ]; then
 fi
 
 ROOT=$(pwd)
+
+case $BUSYTEX in
+    /*) ;;
+    *) [ -x "$ROOT/$BUSYTEX" ] && BUSYTEX="$ROOT/$BUSYTEX" ;;
+esac
+
+if ! $BUSYTEX $XETEX_APPLET --version > /dev/null 2>&1; then
+    echo "smoke-fontindex: cannot run [$BUSYTEX $XETEX_APPLET], output follows" >&2
+    $BUSYTEX $XETEX_APPLET --version >&2 2>&1 || true
+    exit 1
+fi
+
 rm -rf "$WORK"
 mkdir -p "$WORK/texmf-dist/fonts/opentype" "$WORK/texmf-dist/fonts/truetype" \
          "$WORK/with-index" "$WORK/without-index" "$WORK/fontconfig/cache"
@@ -64,7 +77,8 @@ run_case() {
     dir=$1
     cd "$ROOT/$dir"
     FONTCONFIG_FILE="$ROOT/$WORK/fontconfig/fonts.conf" \
-        $XETEX_CMD -ini -etex -no-pdf -interaction=nonstopmode test.tex > /dev/null 2>&1 || true
+        $BUSYTEX $XETEX_APPLET -ini -etex -no-pdf -interaction=nonstopmode test.tex \
+        > run.out 2>&1 || true
     cd "$ROOT"
     if [ ! -f "$dir/test.log" ]; then
         echo "missing"
@@ -77,6 +91,11 @@ run_case() {
     fi
 }
 
+report_case() {
+    echo "smoke-fontindex: engine output from $1" >&2
+    LC_ALL=C sed -n '1,40p' "$1/run.out" >&2 2>/dev/null || true
+}
+
 echo "smoke-fontindex: requesting \"$FONTNAME\" with fontconfig starved"
 
 CONTROL=$(run_case "$WORK/without-index")
@@ -85,13 +104,20 @@ ACTUAL=$(run_case "$WORK/with-index")
 echo "smoke-fontindex: without index -> $CONTROL"
 echo "smoke-fontindex: with index    -> $ACTUAL"
 
+if [ "$CONTROL" = "missing" ] || [ "$ACTUAL" = "missing" ]; then
+    echo "smoke-fontindex: FAIL, the engine produced no log" >&2
+    report_case "$WORK/without-index"
+    exit 1
+fi
+
 if [ "$CONTROL" != "unresolved" ]; then
-    echo "smoke-fontindex: FAIL, control run resolved the font without the index" >&2
+    echo "smoke-fontindex: FAIL, the control run resolved the font without the index" >&2
     exit 1
 fi
 
 if [ "$ACTUAL" != "resolved" ]; then
     echo "smoke-fontindex: FAIL, the index did not resolve the font" >&2
+    report_case "$WORK/with-index"
     exit 1
 fi
 
