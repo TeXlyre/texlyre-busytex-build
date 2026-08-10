@@ -27,7 +27,6 @@ mkdir -p "$CONF_DIR" "$CACHE_DIR"
 cat > "$CONF_DIR/luaotfload.conf" << 'CONF'
 [db]
 location-precedence = texmf
-update-live = false
 formats = otf,ttf,ttc
 CONF
 
