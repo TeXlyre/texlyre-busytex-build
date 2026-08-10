@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import sys
 
-from fontTools.ttLib import TTCollection, TTFont, TTLibError
+from fontTools.ttLib import TTCollection, TTFont
 
 FORMAT_VERSION = 1
 FONT_ROOTS = ("opentype", "truetype")
@@ -66,11 +66,18 @@ def collect_names(font: TTFont) -> tuple[str, list[str], list[str], list[str]]:
     return psname, families, styles, buckets[NAME_FULL]
 
 
+def safe_table(font: TTFont, tag: str):
+    try:
+        return font.get(tag)
+    except Exception:
+        return None
+
+
 def collect_style_flags(font: TTFont) -> tuple[int, int, int, int, int, int]:
-    weight = width = slant = 0
+    weight, width, slant = 400, 5, 0
     is_regular = is_bold = is_italic = 0
 
-    os2 = font.get("OS/2")
+    os2 = safe_table(font, "OS/2")
     if os2 is not None:
         weight = int(os2.usWeightClass)
         width = int(os2.usWidthClass)
@@ -79,13 +86,13 @@ def collect_style_flags(font: TTFont) -> tuple[int, int, int, int, int, int]:
         is_bold = int(bool(selection & (1 << 5)))
         is_italic = int(bool(selection & (1 << 0)))
 
-    head = font.get("head")
+    head = safe_table(font, "head")
     if head is not None:
         mac_style = int(head.macStyle)
         is_bold |= int(bool(mac_style & (1 << 0)))
         is_italic |= int(bool(mac_style & (1 << 1)))
 
-    post = font.get("post")
+    post = safe_table(font, "post")
     if post is not None:
         slant = int(1000 * math.tan(math.radians(-float(post.italicAngle))))
 
@@ -93,7 +100,7 @@ def collect_style_flags(font: TTFont) -> tuple[int, int, int, int, int, int]:
 
 
 def collect_opsize(font: TTFont) -> tuple[float, float, float, int, int]:
-    gpos = font.get("GPOS")
+    gpos = safe_table(font, "GPOS")
     if gpos is None or gpos.table is None or gpos.table.FeatureList is None:
         return 10.0, 0.0, 0.0, 0, 0
 
@@ -161,6 +168,7 @@ def font_files(texmf_dist: Path) -> list[Path]:
 def build(texmf_dist: Path, output: Path) -> None:
     seen: set[str] = set()
     records: list[str] = []
+    unreadable: list[str] = []
     skipped = 0
 
     for path in font_files(texmf_dist):
@@ -173,8 +181,10 @@ def build(texmf_dist: Path, output: Path) -> None:
                 record = build_record(path, face)
                 if record:
                     records.append(record)
-        except (TTLibError, OSError, KeyError, AttributeError, ValueError):
+        except Exception as error:
             skipped += 1
+            if len(unreadable) < 10:
+                unreadable.append(f"{path.name}: {type(error).__name__}: {error}")
 
     if not records:
         sys.exit(f"No usable faces found below {texmf_dist / 'fonts'}")
@@ -187,6 +197,8 @@ def build(texmf_dist: Path, output: Path) -> None:
             handle.write(record + "\n")
 
     print(f"{output}: {len(records)} faces, {skipped} unreadable files")
+    for line in unreadable:
+        print(f"  skipped {line}")
 
 
 def parse_args() -> argparse.Namespace:
