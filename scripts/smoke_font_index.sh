@@ -25,6 +25,18 @@ case $BUSYTEX in
     *) [ -x "$ROOT/$BUSYTEX" ] && BUSYTEX="$ROOT/$BUSYTEX" ;;
 esac
 
+if [ -z "${ICU_DATA:-}" ]; then
+    ICU_DAT=$(find build/native/texlive/libs/icu -name 'icudt*.dat' 2>/dev/null | head -n 1)
+    if [ -n "$ICU_DAT" ]; then
+        ICU_DATA="$ROOT/$(dirname "$ICU_DAT")/"
+        export ICU_DATA
+        echo "smoke-fontindex: using ICU data below $ICU_DATA"
+    else
+        echo "smoke-fontindex: no icudt*.dat below build/native/texlive/libs/icu;"
+        echo "smoke-fontindex: continuing in case the data is linked into the binary"
+    fi
+fi
+
 if ! $BUSYTEX $XETEX_APPLET --version > /dev/null 2>&1; then
     echo "smoke-fontindex: cannot run [$BUSYTEX $XETEX_APPLET], output follows"
     $BUSYTEX $XETEX_APPLET --version 2>&1 || true
@@ -86,7 +98,15 @@ run_case() {
         $BUSYTEX $XETEX_APPLET -ini -etex -no-pdf -interaction=nonstopmode test.tex \
         > run.out 2>&1 || true
     cd "$ROOT"
+    if LC_ALL=C grep -q 'cannot read font names' "$dir/run.out"; then
+        echo "icu"
+        return
+    fi
     if [ ! -f "$dir/test.log" ]; then
+        echo "missing"
+        return
+    fi
+    if ! LC_ALL=C grep -q 'Requested font' "$dir/test.log"; then
         echo "missing"
         return
     fi
@@ -114,7 +134,10 @@ echo "smoke-fontindex: with index    -> $ACTUAL"
 
 if [ "$CONTROL" != "unresolved" ] || [ "$ACTUAL" != "resolved" ]; then
     report
-    if [ "$CONTROL" != "unresolved" ]; then
+    if [ "$CONTROL" = "icu" ] || [ "$ACTUAL" = "icu" ]; then
+        echo "smoke-fontindex: FAIL, XeTeX could not open its ICU converters." >&2
+        echo "smoke-fontindex: set ICU_DATA to the directory holding icudt*.dat." >&2
+    elif [ "$CONTROL" != "unresolved" ]; then
         echo "smoke-fontindex: FAIL, the control run did not fail as it must" >&2
     else
         echo "smoke-fontindex: FAIL, the index did not resolve the font" >&2
