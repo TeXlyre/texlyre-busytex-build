@@ -130,7 +130,7 @@ Then run the production server following the [server instructions](./texlive-ser
 
 Two further artifacts are built from the full tree and published as release assets, then installed into every wasm data package by `make install-font-assets`: the complete `pdftex.map`, so pdfTeX and xdvipdfmx have map entries for remote Type1 fonts, and a prebuilt `luaotfload-names.lua.gz` with `location-precedence = texmf`, so LuaHBTeX resolves font names to basenames and fetches them through the same remote `kpse` path. Live updates are deliberately left enabled: with them off, luaotfload returns a stub index when the database is not found and then crashes on the first font lookup. `busytex.c` pins `TEXMFCACHE` to the shipped tree because luaotfload derives its index path from the first writable cache entry, which otherwise resolves elsewhere. `scripts/check_font_assets.sh` is run by both workflows and fails the build if any of the three is missing or implausible.
 
-`make smoke-wasm` checks this end to end. Alongside the ordinary compiles it renames a font to a family no bundled tree can contain, serves that font and a matching index from a fake remote endpoint, and compiles a document that selects it by name, so a pass can only come from the index. `make smoke-fontindex` runs the same idea against the native build, but XeTeX's font manager needs `ICU_DATA` pointing at `icudt*.dat` to start there.
+`make smoke-wasm` checks this end to end. Alongside the ordinary compiles it renames a font to a family no bundled tree can contain, serves that font and a matching index from a fake remote endpoint, and compiles a document that selects it by name, so a pass can only come from the index.
 
 ---
 

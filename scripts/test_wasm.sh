@@ -102,6 +102,12 @@ async function run() {
         drivers.push({ name: 'xelatex remote font', driver: 'xetex_bibtex8_dvipdfmx',
                        files: remoteFiles, main: 'example-remotefont.tex', remote: 'http://busytex.invalid/remote' });
 
+    const luaRemoteTex = REMOTE_DIR ? path.join(REMOTE_DIR, 'example-luaotfload-remote.tex') : '';
+    if (luaRemoteTex && fs.existsSync(luaRemoteTex))
+        drivers.push({ name: 'luahblatex remote font', driver: 'luahbtex_bibtex8',
+                       files: [{ path: 'example-luaotfload-remote.tex', contents: fs.readFileSync(luaRemoteTex, 'utf8') }],
+                       main: 'example-luaotfload-remote.tex', remote: 'http://busytex.invalid/remote' });
+
     let allOk = true;
 
     for (const { name, driver, files, main, remote, diagnose } of drivers) {

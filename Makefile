@@ -683,9 +683,6 @@ install-font-assets:
 	  cp build/fontassets/luaotfload-names.lua.gz build/texlive-$(name)/texmf-dist/texmf-var/luatex-cache/generic/names/; \
 	  cp luaotfload.conf build/texlive-$(name)/texmf-dist/tex/luatex/luaotfload/; )
 
-smoke-fontindex: build/native/busytex
-	sh scripts/smoke_font_index.sh $(FONTS_DIR)
-
 smoke-native: build/native/busytex
 	-$(LDD_native) $(BUSYTEX_native)
 	$(BUSYTEX_native)

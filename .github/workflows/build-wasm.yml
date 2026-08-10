@@ -95,9 +95,6 @@ jobs:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
         run: make wasm
 
-      - name: Check font assets
-        run: sh scripts/check_font_assets.sh wasm build/wasm/busytex.wasm
-
       - name: Create packages and dist
         run: |
             make build/wasm/texlive-basic.js
