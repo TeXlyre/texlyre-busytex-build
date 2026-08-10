@@ -528,6 +528,7 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/texmf-dist/texmf-var/fonts/conf/fonts.conf
 	-mv $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/lualatex.fmt $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
+	$(if $(filter full,$*),sh scripts/build_luaotfload_db.sh $(basename $@))
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
 	# Never ship native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
 	rm -f $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.fmt \
@@ -536,6 +537,7 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luatex/*.log
 	# --------------------------------------------------------------------------------
 	$(if $(filter full,$*),$(PYTHON) scripts/build_font_index.py --texmf-dist $(basename $@)/texmf-dist --output $(basename $@)/texmf-dist/busytex-fontindex.txt)
+	$(if $(filter full,$*),sh scripts/check_font_assets.sh full $(basename $@)/texmf-dist)
 	mkdir -p $(dir $@)
 	find $(basename $@) > $@
 	tar -czf $(basename $@).tar.gz $(basename $@)
@@ -670,6 +672,18 @@ build/versions.txt:
 	echo emscripten: $(EMSCRIPTEN_VERSION)                             >> $@
 
 .PHONY: smoke-native
+install-font-assets:
+	test -s build/fontassets/pdftex.map
+	test -s build/fontassets/luaotfload-names.lua.gz
+	test -s build/fontassets/luaotfload.conf
+	$(foreach name,basic recommended extra,\
+	  mkdir -p build/texlive-$(name)/texmf-dist/texmf-var/fonts/map/pdftex/updmap \
+	           build/texlive-$(name)/texmf-dist/texmf-var/luatex-cache/generic/names \
+	           build/texlive-$(name)/texmf-dist/tex/luatex/luaotfload; \
+	  cp build/fontassets/pdftex.map build/texlive-$(name)/texmf-dist/texmf-var/fonts/map/pdftex/updmap/pdftex.map; \
+	  cp build/fontassets/luaotfload-names.lua.gz build/texlive-$(name)/texmf-dist/texmf-var/luatex-cache/generic/names/; \
+	  cp build/fontassets/luaotfload.conf build/texlive-$(name)/texmf-dist/tex/luatex/luaotfload/; )
+
 smoke-fontindex: build/native/busytex
 	sh scripts/smoke_font_index.sh $(FONTS_DIR)
 
@@ -679,8 +693,9 @@ smoke-native: build/native/busytex
 	-$(foreach applet,xelatex pdflatex luahblatex lualatex bibtex8 xdvipdfmx kpsewhich kpsestat kpseaccess kpsereadlink,echo $(BUSYTEX_native) $(applet) --version; $(BUSYTEX_native) $(applet) --version; )
 
 .PHONY: smoke-wasm
-smoke-wasm: build/wasm/busytex.js build/wasm/texlive-basic.js
-	bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js
+smoke-wasm: build/wasm/busytex.js build/wasm/texlive-basic.js build/wasm/texlive-recommended.js
+	sh scripts/check_font_assets.sh wasm build/wasm/busytex.wasm
+	bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js build/wasm/texlive-recommended.js
 	
 ################################################################################################################
 

@@ -7,6 +7,9 @@ on:
         description: 'busytex native release tag'
         required: true
         default: build_native_25cb7a9ae6f588003d82857b956e4965bea9a753_24562298930_1
+      texlivefullreleasetag:
+        description: 'texlive-full release tag carrying the font assets'
+        required: true
       privaterepo:
         description: 'Use authenticated download (required for private repos)'
         type: boolean
@@ -63,6 +66,17 @@ jobs:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
         run: make build/texlive-basic.txt build/texlive-recommended.txt build/texlive-extra.txt
 
+      - name: Install font assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/fontassets
+          gh release download '${{ github.event.inputs.texlivefullreleasetag }}' \
+            --repo "$GITHUB_REPOSITORY" --dir build/fontassets --clobber \
+            -p pdftex.map -p luaotfload-names.lua.gz -p luaotfload.conf
+          make install-font-assets
+
       - name: Clean-up texmf sources and ISO
         run: rm -rf source/texmfrepo source/texlive2026.iso
 
@@ -78,6 +92,9 @@ jobs:
         env:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
         run: make wasm
+
+      - name: Check font assets
+        run: sh scripts/check_font_assets.sh wasm build/wasm/busytex.wasm
 
       - name: Create packages and dist
         run: |

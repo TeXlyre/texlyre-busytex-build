@@ -3,11 +3,12 @@
 # Usage: ./test_wasm.sh <path-to-busytex.js> <path-to-texlive-basic.js>
 set -euo pipefail
 
-BUSYTEX_JS=${1:?Usage: $0 <busytex.js> <texlive-basic.js>}
-TEXLIVE_JS=${2:?Usage: $0 <busytex.js> <texlive-basic.js>}
+BUSYTEX_JS=${1:?Usage: $0 <busytex.js> <texlive-basic.js> [texlive-recommended.js]}
+TEXLIVE_JS=${2:?Usage: $0 <busytex.js> <texlive-basic.js> [texlive-recommended.js]}
+TEXLIVE_EXTRA_JS=${3:-}
 SCRIPT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
-node - "$SCRIPT_DIR" "$BUSYTEX_JS" "$TEXLIVE_JS" << 'JSEOF'
+node - "$SCRIPT_DIR" "$BUSYTEX_JS" "$TEXLIVE_JS" "$TEXLIVE_EXTRA_JS" << 'JSEOF'
 const fs   = require('fs');
 const path = require('path');
 
@@ -15,6 +16,7 @@ const SCRIPT_DIR   = process.argv[2];
 const BUSYTEX_JS   = path.resolve(process.argv[3]);
 const TEXLIVE_JS   = path.resolve(process.argv[4]);
 const BUSYTEX_WASM = BUSYTEX_JS.replace('.js', '.wasm');
+const TEXLIVE_ALL  = [TEXLIVE_JS].concat(process.argv[5] ? [path.resolve(process.argv[5])] : []);
 
 global.self = global;
 global.indexedDB = undefined;
@@ -61,15 +63,21 @@ async function run() {
         { path: 'example.bib', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example.bib'), 'utf8') },
     ];
 
+    const fontFiles = [
+        { path: 'example-fontspec.tex', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example-fontspec.tex'), 'utf8') },
+    ];
+
     const drivers = [
-        { name: 'pdflatex',   driver: 'pdftex_bibtex8' },
-        { name: 'xelatex',    driver: 'xetex_bibtex8_dvipdfmx' },
-        { name: 'luahblatex', driver: 'luahbtex_bibtex8' },
+        { name: 'pdflatex',   driver: 'pdftex_bibtex8',           files: texFiles,  main: 'example.tex' },
+        { name: 'xelatex',    driver: 'xetex_bibtex8_dvipdfmx',   files: texFiles,  main: 'example.tex' },
+        { name: 'luahblatex', driver: 'luahbtex_bibtex8',         files: texFiles,  main: 'example.tex' },
+        { name: 'xelatex fontspec',    driver: 'xetex_bibtex8_dvipdfmx', files: fontFiles, main: 'example-fontspec.tex' },
+        { name: 'luahblatex fontspec', driver: 'luahbtex_bibtex8',       files: fontFiles, main: 'example-fontspec.tex' },
     ];
 
     let allOk = true;
 
-    for (const { name, driver } of drivers) {
+    for (const { name, driver, files, main } of drivers) {
         _consoleLog('\n--- ' + name + ' ---');
         try {
             console.log   = () => {};
@@ -78,8 +86,8 @@ async function run() {
             const pipeline = new BusytexPipeline(
                 BUSYTEX_JS,
                 BUSYTEX_WASM,
-                [TEXLIVE_JS],
-                [TEXLIVE_JS],
+                TEXLIVE_ALL,
+                TEXLIVE_ALL,
                 [],
                 () => {},
                 () => {},
@@ -89,7 +97,7 @@ async function run() {
 
             await pipeline.on_initialized_promise;
 
-            const result = await pipeline.compile(texFiles, 'example.tex', false, false, false, BusytexPipeline.VerboseSilent, driver, []);
+            const result = await pipeline.compile(files, main, false, false, false, BusytexPipeline.VerboseSilent, driver, []);
 
             console.log   = _consoleLog;
             console.error = _consoleError;
