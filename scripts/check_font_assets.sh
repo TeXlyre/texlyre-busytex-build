@@ -5,9 +5,11 @@ set -eu
 MODE=${1:?Usage: $0 full|wasm}
 
 INDEX_MIN_RECORDS=1000
+INDEX_RECORDS=0
 INDEX_KNOWN_FILES='texgyrepagella-regular.otf latinmodern-math.otf'
 MAP_MIN_LINES=2000
-DB_MIN_BYTES=262144
+DB_MIN_ENTRIES=100
+DB_MIN_RATIO=2
 
 fail() {
     echo "check_font_assets: $1" >&2
@@ -21,6 +23,7 @@ check_index() {
         || fail "$index has no recognised header"
 
     records=$(($(wc -l < "$index") - 1))
+    INDEX_RECORDS=$records
     [ "$records" -ge "$INDEX_MIN_RECORDS" ] \
         || fail "$index holds $records faces, expected at least $INDEX_MIN_RECORDS"
 
@@ -44,19 +47,32 @@ check_map() {
     echo "check_font_assets: pdftex.map ok, $lines entries"
 }
 
+db_entries() {
+    case $1 in
+        *.gz) gzip -dc "$1" | grep -o basename | wc -l ;;
+        *)    grep -o basename < "$1" | wc -l ;;
+    esac
+}
+
 check_db() {
     db=$1
     conf=$2
+    expected=${3:-0}
     [ -f "$db" ] || fail "missing luaotfload database at $db"
-    bytes=$(wc -c < "$db")
-    [ "$bytes" -ge "$DB_MIN_BYTES" ] \
-        || fail "$db is only $bytes bytes"
+    entries=$(db_entries "$db")
+    [ "$entries" -ge "$DB_MIN_ENTRIES" ] \
+        || fail "$db holds $entries entries, expected at least $DB_MIN_ENTRIES"
+    if [ "$expected" -gt 0 ]; then
+        floor=$((expected / DB_MIN_RATIO))
+        [ "$entries" -ge "$floor" ] \
+            || fail "$db holds $entries entries against $expected indexed faces, the scan missed most of the tree"
+    fi
     [ -f "$conf" ] || fail "missing luaotfload.conf at $conf"
     grep -q 'location-precedence *= *texmf' "$conf" \
         || fail "$conf does not pin location-precedence to texmf"
     grep -q 'update-live *= *false' "$conf" \
         || fail "$conf does not disable live updates"
-    echo "check_font_assets: luaotfload database ok, $bytes bytes"
+    echo "check_font_assets: luaotfload database ok, $entries entries"
 }
 
 case $MODE in
@@ -65,7 +81,7 @@ case $MODE in
         check_index "$TEXMFDIST/busytex-fontindex.txt"
         check_map "$TEXMFDIST/texmf-var/fonts/map/pdftex/updmap/pdftex.map"
         check_db "$TEXMFDIST/texmf-var/luatex-cache/generic/names/luaotfload-names.lua.gz" \
-                 "$TEXMFDIST/tex/luatex/luaotfload/luaotfload.conf"
+                 "$TEXMFDIST/tex/luatex/luaotfload/luaotfload.conf" "$INDEX_RECORDS"
         ;;
     wasm)
         WASM=${2:-build/wasm/busytex.wasm}

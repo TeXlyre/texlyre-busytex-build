@@ -46,10 +46,14 @@ if [ -z "$DB" ]; then
     exit 1
 fi
 
-BYTES=$(wc -c < "$DB")
-if [ "$BYTES" -lt 262144 ]; then
-    echo "build_luaotfload_db: $DB is only $BYTES bytes, the scan found almost nothing" >&2
+case $DB in
+    *.gz) ENTRIES=$(gzip -dc "$DB" | grep -o basename | wc -l) ;;
+    *)    ENTRIES=$(grep -o basename < "$DB" | wc -l) ;;
+esac
+
+if [ "$ENTRIES" -lt 100 ]; then
+    echo "build_luaotfload_db: $DB holds $ENTRIES entries, the scan found almost nothing" >&2
     exit 1
 fi
 
-echo "build_luaotfload_db: $DB ($BYTES bytes)"
+echo "build_luaotfload_db: $DB ($(wc -c < "$DB") bytes, $ENTRIES entries)"
