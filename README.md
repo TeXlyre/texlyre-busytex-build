@@ -128,7 +128,7 @@ Then run the production server following the [server instructions](./texlive-ser
 
 `make build/texlive-full.txt` also writes `busytex-fontindex.txt` into the served `texmf-dist`, a flat catalogue of every OpenType and TrueType face in the full tree (names, style flags, OpenType `size` parameters). When XeTeX fails to resolve a font name against the bundled fontconfig set, it fetches this catalogue through the usual remote `kpse` path and matches against it in memory, then downloads only the single face it selected. Generating it requires `fonttools`; `scripts/build_font_index.py` can also be run standalone against any `texmf-dist`.
 
-`make smoke-fontindex` checks this end to end against the native build. It starves fontconfig of every font and requests one by name twice, once without the index and once with it: the first run must fail and the second must succeed, so a pass can only come from the index. Pass `FONTS_DIR=` to point it at a font tree other than `/usr/share/fonts`.
+`make smoke-fontindex` checks this end to end against the native build. It renames a font to a family no system font set can contain and requests it by name twice, once without the index and once with it: the first run must fail and the second must succeed, so a pass can only come from the index. Pass `FONTS_DIR=` to point it at a font tree other than `/usr/share/fonts`.
 
 ---
 
