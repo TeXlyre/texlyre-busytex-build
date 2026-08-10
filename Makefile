@@ -695,7 +695,8 @@ smoke-native: build/native/busytex
 .PHONY: smoke-wasm
 smoke-wasm: build/wasm/busytex.js build/wasm/texlive-basic.js build/wasm/texlive-recommended.js
 	sh scripts/check_font_assets.sh wasm build/wasm/busytex.wasm
-	bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js build/wasm/texlive-recommended.js
+	sh scripts/make_remote_font_fixture.sh build/wasm/remotefont
+	BUSYTEX_REMOTE_DIR=$(abspath build/wasm/remotefont) bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js build/wasm/texlive-recommended.js
 	
 ################################################################################################################
 

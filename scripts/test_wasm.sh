@@ -35,9 +35,21 @@ WebAssembly.compileStreaming = async (fetchPromise) => {
     return WebAssembly.compile(buf);
 };
 
+const REMOTE_DIR = process.env.BUSYTEX_REMOTE_DIR || '';
+
 global.XMLHttpRequest = class {
-    open(method, url) { this._url = url; }
-    send() { this.status = 404; this.response = null; }
+    open(method, url) { this._url = String(url); }
+    send() {
+        this.status = 404;
+        this.response = null;
+        if (!REMOTE_DIR) return;
+        const name = decodeURIComponent(this._url.split('/').pop());
+        const file = path.join(REMOTE_DIR, name);
+        if (!name || name.includes('..') || !fs.existsSync(file)) return;
+        const data = fs.readFileSync(file);
+        this.status = 200;
+        this.response = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    }
     get responseType() { return this._responseType || ''; }
     set responseType(v) { this._responseType = v; }
     set timeout(_) {}
@@ -67,6 +79,10 @@ async function run() {
         { path: 'example-fontspec.tex', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example-fontspec.tex'), 'utf8') },
     ];
 
+    const remoteFiles = [
+        { path: 'example-remotefont.tex', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example-remotefont.tex'), 'utf8') },
+    ];
+
     const drivers = [
         { name: 'pdflatex',   driver: 'pdftex_bibtex8',           files: texFiles,  main: 'example.tex' },
         { name: 'xelatex',    driver: 'xetex_bibtex8_dvipdfmx',   files: texFiles,  main: 'example.tex' },
@@ -75,9 +91,13 @@ async function run() {
         { name: 'luahblatex fontspec', driver: 'luahbtex_bibtex8',       files: fontFiles, main: 'example-fontspec.tex' },
     ];
 
+    if (REMOTE_DIR)
+        drivers.push({ name: 'xelatex remote font', driver: 'xetex_bibtex8_dvipdfmx',
+                       files: remoteFiles, main: 'example-remotefont.tex', remote: 'http://busytex.invalid/remote' });
+
     let allOk = true;
 
-    for (const { name, driver, files, main } of drivers) {
+    for (const { name, driver, files, main, remote } of drivers) {
         _consoleLog('\n--- ' + name + ' ---');
         try {
             console.log   = () => {};
@@ -97,7 +117,7 @@ async function run() {
 
             await pipeline.on_initialized_promise;
 
-            const result = await pipeline.compile(files, main, false, false, false, BusytexPipeline.VerboseSilent, driver, []);
+            const result = await pipeline.compile(files, main, false, false, false, BusytexPipeline.VerboseSilent, driver, [], remote || '');
 
             console.log   = _consoleLog;
             console.error = _consoleError;

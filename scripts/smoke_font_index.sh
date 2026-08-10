@@ -65,7 +65,7 @@ from fontTools.ttLib import TTFont
 source, target, family, fullname, psname = sys.argv[1:6]
 font = TTFont(source)
 table = font["name"]
-table.names = [record for record in table.names if record.nameID not in (16, 17)]
+table.names = [record for record in table.names if record.nameID not in (1, 2, 4, 6, 16, 17)]
 for name_id, value in ((1, family), (2, "Regular"), (4, fullname), (6, psname)):
     table.setName(value, name_id, 3, 1, 0x409)
     table.setName(value, name_id, 1, 0, 0)

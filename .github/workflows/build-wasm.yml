@@ -44,7 +44,9 @@ jobs:
           df -h
 
       - name: Install Prerequisites
-        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries
+        run: |
+          sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries fonts-dejavu-core
+          python3 -m pip install --break-system-packages fonttools || python3 -m pip install fonttools
 
       - uses: actions/checkout@v4
 
