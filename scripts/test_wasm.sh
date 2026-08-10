@@ -91,13 +91,20 @@ async function run() {
         { name: 'luahblatex fontspec', driver: 'luahbtex_bibtex8',       files: fontFiles, main: 'example-fontspec.tex' },
     ];
 
+    const diagFiles = [
+        { path: 'example-luaotfload-diag.tex', contents: fs.readFileSync(path.join(SCRIPT_DIR, 'example/example-luaotfload-diag.tex'), 'utf8') },
+    ];
+
+    drivers.push({ name: 'luahblatex diagnose', driver: 'luahbtex_bibtex8',
+                   files: diagFiles, main: 'example-luaotfload-diag.tex', diagnose: true });
+
     if (REMOTE_DIR)
         drivers.push({ name: 'xelatex remote font', driver: 'xetex_bibtex8_dvipdfmx',
                        files: remoteFiles, main: 'example-remotefont.tex', remote: 'http://busytex.invalid/remote' });
 
     let allOk = true;
 
-    for (const { name, driver, files, main, remote } of drivers) {
+    for (const { name, driver, files, main, remote, diagnose } of drivers) {
         _consoleLog('\n--- ' + name + ' ---');
         try {
             console.log   = () => {};
@@ -121,6 +128,15 @@ async function run() {
 
             console.log   = _consoleLog;
             console.error = _consoleError;
+
+            if (diagnose) {
+                const lines = (result.log || '').split('\n').filter(line => line.includes('BUSYTEX-DIAG'));
+                if (lines.length)
+                    for (const line of lines) _consoleLog(line.trim());
+                else
+                    _consoleLog('no diagnostic output, exit=' + result.exit_code + '\n' + (result.log || '').slice(-1500));
+                continue;
+            }
 
             if (result.exit_code !== 0 || !result.pdf) {
                 _consoleError('FAIL: ' + name + ' (exit=' + result.exit_code + ', pdf=' + !!result.pdf + ')');

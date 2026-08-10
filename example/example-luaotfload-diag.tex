@@ -1,0 +1,41 @@
+\documentclass{article}
+\usepackage{fontspec}
+\begin{document}
+\directlua{
+local function show(label, value)
+  texio.write_nl("BUSYTEX-DIAG " .. label .. "=" .. tostring(value))
+end
+local function try(label, fn)
+  local ok, value = pcall(fn)
+  show(label, ok and value or ("ERROR: " .. tostring(value)))
+end
+try("luaotfload_version", function() return luaotfload and luaotfload.version end)
+try("cache_dir", function() return config.luaotfload.paths.cache_dir end)
+try("index_path_lua", function() return config.luaotfload.paths.index_path_lua end)
+try("index_path_luc", function() return config.luaotfload.paths.index_path_luc end)
+try("location_precedence", function() return table.concat(config.luaotfload.db.location_precedence, ",") end)
+try("conf_via_kpse", function() return kpse.find_file("luaotfload.conf") end)
+try("TEXMFVAR", function() return kpse.var_value("TEXMFVAR") end)
+try("TEXMFCACHE", function() return kpse.var_value("TEXMFCACHE") end)
+try("readable_cache_paths", function()
+  return table.concat(caches.getreadablepaths(config.luaotfload.paths.cache_dir), ",")
+end)
+try("writable_cache_path", function()
+  return caches.getwritablepath(config.luaotfload.paths.cache_dir, "")
+end)
+local shipped = "/texlive/texmf-dist/texmf-var/luatex-cache/generic/names/"
+try("shipped_gz_exists", function() return lfs.isfile(shipped .. "luaotfload-names.lua.gz") end)
+try("shipped_lua_exists", function() return lfs.isfile(shipped .. "luaotfload-names.lua") end)
+try("shipped_dir", function()
+  local names = {}
+  for entry in lfs.dir(shipped) do names[#names + 1] = entry end
+  return table.concat(names, ",")
+end)
+try("generic_dir", function()
+  local names = {}
+  for entry in lfs.dir("/texlive/texmf-dist/texmf-var/luatex-cache/generic/") do names[#names + 1] = entry end
+  return table.concat(names, ",")
+end)
+}
+Diagnostic run.
+\end{document}
