@@ -259,6 +259,7 @@ class BusytexPipeline {
         this.env = {
             TEXMFDIST: this.dir_texmfdist,
             TEXMFVAR: this.dir_texmfvar,
+            TEXMFCACHE: this.dir_texmfvar,
             TEXMFCNF: this.dir_cnf,
             TEXMFLOG: this.texmflog,
             FONTCONFIG_PATH: this.dir_fontconfig,

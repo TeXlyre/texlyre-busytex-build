@@ -360,7 +360,7 @@ build/%/texlive/texk/bibtex-x/busytex_bibtex8.a: build/%/texlive.configured
 	$(MAKE_$*) -C $(dir $@) bibtex8-bibtex.o $(OPTS_BIBTEX_$*)
 	$(AR_$*) -crs $@ $(dir $@)/bibtex8-*.o
 
-build/%/busytex build/%/busytex.js:
+build/%/busytex build/%/busytex.js: busytex.c kpse_remote.c font_index.cpp kpse_remote.js
 	mkdir -p $(dir $@)
 	$(CC_$*)  -o    $(basename $@).o -c busytex.c  $(OPTS_BUSYTEX_COMPILE_$*) $(CFLAGS_OPT_$*) -I$(abspath build/$*/texlive/libs/icu/include)
 	$(CC_$*)  -o    build/$*/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_$*)
@@ -385,7 +385,7 @@ build/wasm/pdftex.js:
 OBJ_DEPS_XETEX = $(addprefix texlive/libs/, harfbuzz/libharfbuzz.a graphite2/libgraphite2.a teckit/libTECkit.a libpng/libpng.a) fontconfig/src/.libs/libfontconfig.a $(addprefix texlive/libs/, freetype2/libfreetype.a zlib/libz.a icu/icu-build/lib/libicuuc.a icu/icu-build/lib/libicudata.a) texlive/texk/kpathsea/.libs/libkpathsea.a expat/libexpat.a texlive/texk/dvipdfm-x/busytex_xdvipdfmx.a
 OPTS_BUSYTEX_LINK_XETEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=xetex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4",  "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]' --js-library $(ROOT)/kpse_remote.js -Wl,--wrap=kpse_find_file
 
-build/wasm/xetex.js:
+build/wasm/xetex.js: busytex.c kpse_remote.c font_index.cpp kpse_remote.js
 	mkdir -p $(dir $@)
 	$(CC_wasm) -o build/wasm/xetex.o -c busytex.c -DBUSYTEX_XETEX -DBUSYTEX_XDVIPDFMX $(CFLAGS_OPT_wasm)
 	$(CC_wasm) -o build/wasm/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_wasm)

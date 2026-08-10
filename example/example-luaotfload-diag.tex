@@ -14,6 +14,7 @@ try("location_precedence", function() return table.concat(config.luaotfload.db.l
 try("conf_via_kpse", function() return kpse.find_file("luaotfload.conf") end)
 try("TEXMFVAR", function() return kpse.var_value("TEXMFVAR") end)
 try("TEXMFCACHE", function() return kpse.var_value("TEXMFCACHE") end)
+try("TEXMFCACHE_env", function() return os.getenv("TEXMFCACHE") end)
 try("readable_cache_paths", function()
   return table.concat(caches.getreadablepaths(config.luaotfload.paths.cache_dir), ",")
 end)
