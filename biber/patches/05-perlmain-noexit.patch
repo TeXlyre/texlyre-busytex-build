@@ -1,0 +1,87 @@
+diff --git a/perlmain_noexit_patch b/perlmain_noexit_patch
+new file mode 100644
+index 00000000..4b3cca47
+--- /dev/null
++++ b/perlmain_noexit_patch
+@@ -0,0 +1,81 @@
++--- perlmain.c.orig
+++++ perlmain.c
++@@ -54,6 +54,8 @@
++ static void xs_init (pTHX);
++ static PerlInterpreter *my_perl;
++ 
+++int emperl_end_perl(void);
+++
++ #ifdef NO_ENV_ARRAY_IN_MAIN
++ extern char **environ;
++ int
++@@ -63,7 +65,6 @@
++ main(int argc, char **argv, char **env)
++ #endif
++ {
++-    int exitstatus, i;
++ #ifndef NO_ENV_ARRAY_IN_MAIN
++     PERL_UNUSED_ARG(env);
++ #endif
++@@ -103,7 +104,9 @@
++ 	PL_perl_destruct_level = 0;
++     }
++     PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
++-    if (!perl_parse(my_perl, xs_init, argc, argv, (char **)NULL)) {
+++    if (perl_parse(my_perl, xs_init, argc, argv, (char **)NULL))
+++        return emperl_end_perl();
+++    {
++ 
++         /* perl_parse() may end up starting its own run loops, which
++          * might end up "leaking" PL_restartop from the parse phase into
++@@ -123,9 +126,35 @@
++          * risking breakage to XS code under DEBUGGING. - Yves
++          */
++         assert(!PL_restartop);
+++    }
++ 
++-        perl_run(my_perl);
+++    if (perl_run(my_perl))
+++        return emperl_end_perl();
+++
+++    /* Code copied from perl_destruct in perl.c: flush without tearing the
+++     * interpreter down, so the Emscripten runtime survives to call
+++     * emperl_end_perl through ccall. */
+++#ifdef USE_PERLIO
+++    {
+++        PerlIO *stdo = PerlIO_stdout();
+++        if (*stdo && PerlIO_flush(stdo)) {
+++            PerlIO_restore_errno(stdo);
+++            if (errno)
+++                PerlIO_printf(PerlIO_stderr(), "Unable to flush stdout: %s\n",
+++                    Strerror(errno));
+++            if (!STATUS_UNIX)
+++                STATUS_ALL_FAILURE;
+++        }
++     }
+++#endif
+++    my_fflush_all();
+++    return STATUS_EXIT;
+++}
+++
+++int
+++emperl_end_perl(void)
+++{
+++    int exitstatus, i;
++ 
++ #ifndef PERL_MICRO
++     /* Unregister our signal handler before destroying my_perl */
++@@ -142,7 +171,12 @@
++ 
++     PERL_SYS_TERM();
++ 
++-    exit(exitstatus);
+++    /* With EXIT_RUNTIME set, Emscripten throws ExitStatus from exit(), so it is
+++     * only called when the status is nonzero. Perl does not require exit() to
+++     * be reached: END blocks run in perl_destruct above, not via atexit. */
+++    if (exitstatus)
+++        exit(exitstatus);
+++    return exitstatus;
++ }
++ 
++ /* Register any extra external extensions */
