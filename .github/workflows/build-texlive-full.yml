@@ -82,7 +82,6 @@ jobs:
           mkdir -p build/fontassets
           cp build/texlive-full/texmf-dist/texmf-var/fonts/map/pdftex/updmap/pdftex.map build/fontassets/
           cp build/texlive-full/texmf-dist/texmf-var/luatex-cache/generic/names/luaotfload-names.lua.gz build/fontassets/
-          cp build/texlive-full/texmf-dist/tex/luatex/luaotfload/luaotfload.conf build/fontassets/
           ls -lh build/fontassets
 
       - name: Clean-up texmf sources and ISO
@@ -142,7 +141,6 @@ jobs:
             build/versions.txt
             build/fontassets/pdftex.map
             build/fontassets/luaotfload-names.lua.gz
-            build/fontassets/luaotfload.conf
           )
 
           if gh release view "$tag" > /dev/null 2>&1; then

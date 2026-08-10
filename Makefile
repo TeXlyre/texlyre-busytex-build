@@ -675,14 +675,13 @@ build/versions.txt:
 install-font-assets:
 	test -s build/fontassets/pdftex.map
 	test -s build/fontassets/luaotfload-names.lua.gz
-	test -s build/fontassets/luaotfload.conf
 	$(foreach name,basic recommended extra,\
 	  mkdir -p build/texlive-$(name)/texmf-dist/texmf-var/fonts/map/pdftex/updmap \
 	           build/texlive-$(name)/texmf-dist/texmf-var/luatex-cache/generic/names \
 	           build/texlive-$(name)/texmf-dist/tex/luatex/luaotfload; \
 	  cp build/fontassets/pdftex.map build/texlive-$(name)/texmf-dist/texmf-var/fonts/map/pdftex/updmap/pdftex.map; \
 	  cp build/fontassets/luaotfload-names.lua.gz build/texlive-$(name)/texmf-dist/texmf-var/luatex-cache/generic/names/; \
-	  cp build/fontassets/luaotfload.conf build/texlive-$(name)/texmf-dist/tex/luatex/luaotfload/; )
+	  cp luaotfload.conf build/texlive-$(name)/texmf-dist/tex/luatex/luaotfload/; )
 
 smoke-fontindex: build/native/busytex
 	sh scripts/smoke_font_index.sh $(FONTS_DIR)

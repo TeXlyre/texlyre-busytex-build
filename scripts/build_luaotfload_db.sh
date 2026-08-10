@@ -24,11 +24,7 @@ fi
 
 mkdir -p "$CONF_DIR" "$CACHE_DIR"
 
-cat > "$CONF_DIR/luaotfload.conf" << 'CONF'
-[db]
-location-precedence = texmf
-formats = otf,ttf,ttc
-CONF
+cp "$ROOT/luaotfload.conf" "$CONF_DIR/luaotfload.conf"
 
 cd "$TEXDIR"
 TEXMFDIST="$TEXMFDIST" \

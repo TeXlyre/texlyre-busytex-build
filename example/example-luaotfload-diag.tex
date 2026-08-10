@@ -1,6 +1,3 @@
-\documentclass{article}
-\usepackage{fontspec}
-\begin{document}
 \directlua{
 local function show(label, value)
   texio.write_nl("BUSYTEX-DIAG " .. label .. "=" .. tostring(value))
@@ -37,5 +34,7 @@ try("generic_dir", function()
   return table.concat(names, ",")
 end)
 }
+\documentclass{article}
+\begin{document}
 Diagnostic run.
 \end{document}

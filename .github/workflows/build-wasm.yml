@@ -76,7 +76,7 @@ jobs:
           mkdir -p build/fontassets
           gh release download '${{ github.event.inputs.texlivefullreleasetag }}' \
             --repo "$GITHUB_REPOSITORY" --dir build/fontassets --clobber \
-            -p pdftex.map -p luaotfload-names.lua.gz -p luaotfload.conf
+            -p pdftex.map -p luaotfload-names.lua.gz
           make install-font-assets
 
       - name: Clean-up texmf sources and ISO
