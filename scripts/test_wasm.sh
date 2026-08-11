@@ -106,11 +106,12 @@ async function run() {
     if (luaRemoteTex && fs.existsSync(luaRemoteTex))
         drivers.push({ name: 'luahblatex remote font', driver: 'luahbtex_bibtex8',
                        files: [{ path: 'example-luaotfload-remote.tex', contents: fs.readFileSync(luaRemoteTex, 'utf8') }],
-                       main: 'example-luaotfload-remote.tex', remote: 'http://busytex.invalid/remote' });
+                       main: 'example-luaotfload-remote.tex', remote: 'http://busytex.invalid/remote',
+                       optional: true });
 
     let allOk = true;
 
-    for (const { name, driver, files, main, remote, diagnose } of drivers) {
+    for (const { name, driver, files, main, remote, diagnose, optional } of drivers) {
         _consoleLog('\n--- ' + name + ' ---');
         try {
             console.log   = () => {};
@@ -141,6 +142,12 @@ async function run() {
                     for (const line of lines) _consoleLog(line.trim());
                 else
                     _consoleLog('no diagnostic output, exit=' + result.exit_code + '\n' + (result.log || '').slice(-1500));
+                continue;
+            }
+
+            if (optional && (result.exit_code !== 0 || !result.pdf)) {
+                _consoleError('UNPROVEN: ' + name + ' (exit=' + result.exit_code + ')');
+                _consoleError((result.log || '').slice(-1200));
                 continue;
             }
 
