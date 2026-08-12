@@ -85,12 +85,17 @@ def build_index(texmf_root):
 
 
 def get_index():
-    global _file_index
+    global _file_index, _stem_index
     if not _file_index:
-        texmf_root = os.path.abspath(os.environ.get('TEXMF_ROOT', '../build/texlive-full/texmf-dist'))
+        texmf_root = os.path.abspath(
+            os.environ.get(
+                'TEXMF_ROOT',
+                '../build/texlive-full/texmf-dist'
+            )
+        )
         if os.path.isdir(texmf_root):
             app.logger.info(f'Indexing {texmf_root}')
-            _file_index = build_index(texmf_root)
+            _file_index, _stem_index = build_index(texmf_root)
             app.logger.info(f'Indexed {len(_file_index)} files')
         else:
             app.logger.warning(f'TEXMF_ROOT not found: {texmf_root}')
