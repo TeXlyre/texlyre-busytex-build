@@ -103,33 +103,40 @@ def get_index():
 
 
 def find_file(name, fmt):
-    cached = None
     cache_key = f'{fmt}:{name}'
     expected = KPSE_EXTENSIONS.get(fmt, [])
+    key = name.lower()
 
-    def valid_for_format(path):
-        if not expected:
+    def cached_result_matches(path):
+        basename = os.path.basename(path).lower()
+
+        # Exact requested filename is always valid.
+        if basename == key:
             return True
-        lower = path.lower()
-        return any(lower.endswith(ext) for ext in expected)
+
+        # Otherwise this must be a legitimate extensionless stem fallback.
+        if not expected:
+            return False
+
+        stem, ext = os.path.splitext(basename)
+        return stem == key and ext in expected
 
     if redis_client:
         try:
             cached = redis_client.get(cache_key)
             if cached:
                 path = cached.decode()
-                if os.path.isfile(path) and valid_for_format(path):
+                if os.path.isfile(path) and cached_result_matches(path):
                     return path
         except Exception:
             pass
 
     index = get_index()
-    key = name.lower()
+
+    # Exact filenames are always accepted, regardless of extension.
     result = index.get(key)
 
-    if result is not None and not valid_for_format(result):
-        result = None
-
+    # Only extensionless fallback is constrained by kpse format.
     if result is None and expected:
         candidates = _stem_index.get(key, [])
 
@@ -164,13 +171,6 @@ def fetch_file(fileformat, filename):
     # expected_exts = KPSE_EXTENSIONS.get(fileformat)
     # if expected_exts and not any(filepath.lower().endswith(ext) for ext in expected_exts):
     #     return 'File not found', 404
-
-    expected_exts = KPSE_EXTENSIONS.get(fileformat)
-    if expected_exts and not any(
-        filepath.lower().endswith(ext)
-        for ext in expected_exts
-    ):
-        return 'File not found', 404
 
     response = make_response(send_file(filepath, mimetype='application/octet-stream'))
     response.headers['fileid'] = os.path.basename(filepath)
