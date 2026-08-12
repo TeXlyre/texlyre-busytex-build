@@ -140,11 +140,15 @@ def find_file(name, fmt):
     if result is None and expected:
         candidates = _stem_index.get(key, [])
 
-        for cand in candidates:
-            if os.path.splitext(cand)[1] not in expected:
-                continue
+        for ext in expected:
+            for cand in candidates:
+                if os.path.splitext(cand)[1] != ext:
+                    continue
 
-            result = index.get(cand)
+                result = index.get(cand)
+                if result:
+                    break
+
             if result:
                 break
 
