@@ -130,11 +130,11 @@ def find_file(name, fmt):
     if result is not None and not valid_for_format(result):
         result = None
 
-    if result is None:
+    if result is None and expected:
         candidates = _stem_index.get(key, [])
 
         for cand in candidates:
-            if expected and os.path.splitext(cand)[1] not in expected:
+            if os.path.splitext(cand)[1] not in expected:
                 continue
 
             result = index.get(cand)
