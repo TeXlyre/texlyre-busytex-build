@@ -6,7 +6,7 @@ on:
       busytexreleasetag:
         description: 'busytex native release tag'
         required: true
-        default: build_native_25cb7a9ae6f588003d82857b956e4965bea9a753_24562298930_1
+        default: build_native_65ee595ef82aa3dd324db210cd0d2827cc0d426e_31380263152_1
       texlivefullreleasetag:
         description: 'texlive-full release tag carrying the font assets'
         required: true

@@ -146,7 +146,7 @@ mergeInto(LibraryManager.library, {
         if (hit) return stringToNewUTF8(hit);
         if (KPSE_REMOTE.isMiss(name, format)) return 0;
         var fetched = KPSE_REMOTE.fetch(name, format);
-        if (!fetched && format === 39 && name.indexOf('.') !== -1) {
+        if (!fetched && format === 51 && name.indexOf('.') !== -1) {
             var moduleName = name.split('.').pop();
             hit = KPSE_REMOTE.lookup(moduleName, format);
             if (hit) return stringToNewUTF8(hit);

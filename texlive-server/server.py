@@ -15,20 +15,43 @@ elif api_origins:
     CORS(app, resources={r"/*": {"origins": [o.strip() for o in api_origins.split(',')]}})
 
 KPSE_EXTENSIONS = {
+    0:  ['.gf'],
+    1:  ['.pk'],
     3:  ['.tfm'],
     4:  ['.afm'],
+    5:  ['.base'],
     6:  ['.bib'],
     7:  ['.bst'],
+    8:  ['.cnf'],
     10: ['.fmt'],
     11: ['.map'],
+    13: ['.mf'],
+    16: ['.mp'],
+    19: ['.ocp'],
+    20: ['.ofm', '.tfm'],
+    21: ['.opl'],
+    22: ['.otp'],
+    23: ['.ovf', '.vf'],
+    24: ['.ovp'],
     26: ['.tex', '.sty', '.cls', '.fd', '.def', '.cfg', '.ltx', '.dtx', '.ldf', '.clo', '.bbx', '.cbx', '.lbx', '.dbx', '.rtx'],
+    28: ['.pool'],
+    30: ['.pro'],
     32: ['.pfa', '.pfb'],
     33: ['.vf'],
-    35: ['.ttf', '.ttc'],
-    43: ['.enc'],
-    44: ['.cmap'],
-    46: ['.otf'],
-    39: ['.lua'],
+    35: ['.ist'],
+    36: ['.ttf', '.ttc', '.dfont'],
+    44: ['.enc'],
+    46: ['.sfd'],
+    47: ['.otf'],
+    49: ['.lig'],
+    50: ['.lua', '.pl', '.rb', '.py'],
+    51: ['.lua', '.luc', '.luatex', '.texlua', '.tlu'],
+    52: ['.fea'],
+    53: ['.cid', '.cidmap'],
+    54: ['.mlbib', '.bib'],
+    55: ['.mlbst', '.bst'],
+    57: ['.ris'],
+    58: ['.bltxml'],
 }
 
 _SAFE_NAME = re.compile(r'[^a-zA-Z0-9._-]')
@@ -45,14 +68,20 @@ def init_redis(redis_url):
         redis_client = None
 
 
+_stem_index = {}
+
+
 def build_index(texmf_root):
     index = {}
+    stems = {}
     for dirpath, _, filenames in os.walk(texmf_root):
         for fname in filenames:
             key = fname.lower()
             if key not in index:
                 index[key] = os.path.join(dirpath, fname)
-    return index
+            stem = os.path.splitext(key)[0]
+            stems.setdefault(stem, []).append(key)
+    return index, stems
 
 
 def get_index():
@@ -87,11 +116,12 @@ def find_file(name, fmt):
     result = index.get(key)
 
     if result is None:
-        for ext in KPSE_EXTENSIONS.get(fmt, []):
-            if not key.endswith(ext):
-                result = index.get(key + ext)
-                if result:
-                    break
+        candidates = _stem_index.get(key, [])
+        preferred = KPSE_EXTENSIONS.get(fmt, [])
+        for cand in sorted(candidates, key=lambda c: (os.path.splitext(c)[1] not in preferred, c)):
+            result = index.get(cand)
+            if result:
+                break
 
     if result is None and fmt == 26:
         # format 26 is the generic tex input search; try the bare name against

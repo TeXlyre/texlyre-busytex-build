@@ -126,11 +126,12 @@ Then run the production server following the [server instructions](./texlive-ser
 
 ### Remote fonts
 
-`make build/texlive-full.txt` also writes `busytex-fontindex.txt` into the served `texmf-dist`, a flat catalogue of every OpenType and TrueType face in the full tree (names, style flags, OpenType `size` parameters). When XeTeX fails to resolve a font name against the bundled fontconfig set, it fetches this catalogue through the usual remote `kpse` path and matches against it in memory, then downloads only the single face it selected. Generating it requires `fonttools`; `scripts/build_font_index.py` can also be run standalone against any `texmf-dist`.
+The full TeX Live build creates `busytex-fontindex.txt` and places it in the **served `texmf-dist` on the remote server**. XeTeX fetches this index when a font is not available locally, finds the matching face, then downloads only that font file through remote `kpse`.
 
-Two further artifacts are built from the full tree and published as release assets, then installed into every wasm data package by `make install-font-assets`: the complete `pdftex.map`, so pdfTeX and xdvipdfmx have map entries for remote Type1 fonts, and a prebuilt `luaotfload-names.lua.gz` with `location-precedence = texmf`, so LuaHBTeX resolves font names to basenames and fetches them through the same remote `kpse` path. Live updates are disabled: a rescan would replace the shipped database with one built from the bundled tree alone, losing every remote font. This only works because `busytex.c` and the pipeline pin `TEXMFCACHE` to the shipped tree, since luaotfload derives its index path from the first writable cache entry and otherwise fails to find the database at all. `busytex.c` pins `TEXMFCACHE` to the shipped tree because luaotfload derives its index path from the first writable cache entry, which otherwise resolves elsewhere. `scripts/check_font_assets.sh` is run by both workflows and fails the build if any of the three is missing or implausible.
+Two other files are built from the full tree and published as release assets: `pdftex.map` and `luaotfload-names.lua.gz`. However, unlike the font index, these are **installed into every wasm data package** by `make install-font-assets`, allowing pdfTeX/xdvipdfmx and LuaHBTeX to resolve remote fonts.
 
-`make smoke-wasm` checks this end to end. Alongside the ordinary compiles it renames a font to a family no bundled tree can contain, serves that font and a matching index from a fake remote endpoint, and compiles a document that selects it by name, so a pass can only come from the index.
+Luaotfload rescanning is disabled, and `TEXMFCACHE` is pinned to the generated tree so its prebuilt database remains available. `scripts/check_font_assets.sh` validates all three assets, and `make smoke-wasm` tests remote font lookup end-to-end.
+
 
 ---
 

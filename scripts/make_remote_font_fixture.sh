@@ -41,7 +41,7 @@ rm -rf "$OUT/.texmf-dist"
 
 echo "make_remote_font_fixture: $OUT holds $TESTFONT and busytex-fontindex.txt"
 
-# A real TeX Live font that is in the shipped luaotfload database but in none of the
+# A real TeX Live font that is in the generated luaotfload database but in none of the
 # bundled packages: LuaHBTeX can only reach it by fetching it from the endpoint.
 EXTRA_TREE=${EXTRA_TREE:-build/texlive-extra/texmf-dist}
 BUNDLED_TREES=${BUNDLED_TREES:-build/texlive-basic/texmf-dist build/texlive-recommended/texmf-dist}

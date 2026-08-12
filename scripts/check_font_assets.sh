@@ -71,7 +71,7 @@ check_db() {
     grep -q 'location-precedence *= *texmf' "$conf" \
         || fail "$conf does not pin location-precedence to texmf"
     grep -q 'update-live *= *false' "$conf" \
-        || fail "$conf does not disable live updates, a rescan would discard the shipped database"
+        || fail "$conf does not disable live updates, a rescan would discard the generated database"
     cmp -s "$conf" luaotfload.conf \
         || fail "$conf differs from the luaotfload.conf in this checkout"
     echo "check_font_assets: luaotfload database ok, $entries entries"

@@ -15,9 +15,9 @@ try("conf_via_kpse", function() return kpse.find_file("luaotfload.conf") end)
 try("TEXMFVAR", function() return kpse.var_value("TEXMFVAR") end)
 try("TEXMFCACHE", function() return kpse.var_value("TEXMFCACHE") end)
 try("TEXMFCACHE_env", function() return os.getenv("TEXMFCACHE") end)
-local shipped = "/texlive/texmf-dist/texmf-var/luatex-cache/generic/names/"
-try("shipped_gz_exists", function() return lfs.isfile(shipped .. "luaotfload-names.lua.gz") end)
-try("shipped_lua_exists", function() return lfs.isfile(shipped .. "luaotfload-names.lua") end)
+local generated = "/texlive/texmf-dist/texmf-var/luatex-cache/generic/names/"
+try("generated_gz_exists", function() return lfs.isfile(generated .. "luaotfload-names.lua.gz") end)
+try("generated_lua_exists", function() return lfs.isfile(generated .. "luaotfload-names.lua") end)
 try("db_base_lmroman", function()
   return fonts.names.data.files.base.texmf["lmroman10-regular.otf"]
 end)
@@ -28,8 +28,8 @@ try("db_mapping_sample", function()
   local entry = fonts.names.data.mappings[1]
   return tostring(entry.filename) .. " | " .. tostring(entry.location) .. " | " .. tostring(entry.familyname)
 end)
-try("index_dir_matches_shipped", function()
-  return string.sub(tostring(config.luaotfload.paths.index_path_lua), 1, string.len(shipped)) == shipped
+try("index_dir_matches_generated", function()
+  return string.sub(tostring(config.luaotfload.paths.index_path_lua), 1, string.len(generated)) == generated
 end)
 }
 \documentclass{article}

@@ -530,7 +530,7 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
 	$(if $(filter full,$*),sh scripts/build_luaotfload_db.sh $(basename $@))
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
-	# Never ship native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
+	# Never include native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
 	rm -f $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.fmt \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.log \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luatex/*.fmt \
