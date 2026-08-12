@@ -105,13 +105,20 @@ def get_index():
 def find_file(name, fmt):
     cached = None
     cache_key = f'{fmt}:{name}'
+    expected = KPSE_EXTENSIONS.get(fmt, [])
+
+    def valid_for_format(path):
+        if not expected:
+            return True
+        lower = path.lower()
+        return any(lower.endswith(ext) for ext in expected)
 
     if redis_client:
         try:
             cached = redis_client.get(cache_key)
             if cached:
                 path = cached.decode()
-                if os.path.isfile(path):
+                if os.path.isfile(path) and valid_for_format(path):
                     return path
         except Exception:
             pass
@@ -120,18 +127,19 @@ def find_file(name, fmt):
     key = name.lower()
     result = index.get(key)
 
+    if result is not None and not valid_for_format(result):
+        result = None
+
     if result is None:
         candidates = _stem_index.get(key, [])
-        preferred = KPSE_EXTENSIONS.get(fmt, [])
-        for cand in sorted(candidates, key=lambda c: (os.path.splitext(c)[1] not in preferred, c)):
+
+        for cand in candidates:
+            if expected and os.path.splitext(cand)[1] not in expected:
+                continue
+
             result = index.get(cand)
             if result:
                 break
-
-    if result is None and fmt == 26:
-        # format 26 is the generic tex input search; try the bare name against
-        # the full index regardless of extension to catch .rtx, .bst, etc.
-        result = index.get(key)
 
     if result and redis_client:
         try:
@@ -156,6 +164,13 @@ def fetch_file(fileformat, filename):
     # expected_exts = KPSE_EXTENSIONS.get(fileformat)
     # if expected_exts and not any(filepath.lower().endswith(ext) for ext in expected_exts):
     #     return 'File not found', 404
+
+    expected_exts = KPSE_EXTENSIONS.get(fileformat)
+    if expected_exts and not any(
+        filepath.lower().endswith(ext)
+        for ext in expected_exts
+    ):
+        return 'File not found', 404
 
     response = make_response(send_file(filepath, mimetype='application/octet-stream'))
     response.headers['fileid'] = os.path.basename(filepath)
