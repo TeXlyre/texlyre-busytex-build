@@ -26,6 +26,11 @@ CXXFLAGS_native      = -fexceptions -frtti
 CFLAGS_OPT_wasm      = -Oz
 
 ROOT                := $(CURDIR)
+
+PERL_VERSION_BIBER  := 5.38.2
+EMPERL_REPO         := https://github.com/haukex/emperl5.git
+EMPERL_BRANCH       := emperl_v5.30.0
+BIBER_VERSION       := 2.19
 EMROOT              := $(dir $(shell which emcc))
 
 BUSYTEX_native       = $(abspath build/native/busytex)
@@ -636,6 +641,18 @@ wasm-xetex:
 	$(MAKE) build/wasm/busytexapplets
 	$(MAKE) build/wasm/xetex.js
 
+.PHONY: wasm-biber
+wasm-biber:
+	PERL_VERSION=$(PERL_VERSION_BIBER) BIBER_VERSION=$(BIBER_VERSION) BUILD=$(ROOT)/build/wasm/biber biber/build_biber.sh
+	cp build/wasm/biber/biber.js build/wasm/biber.js
+	-cp build/wasm/biber/biber.wasm build/wasm/biber.wasm
+
+.PHONY: download-biber-wasm
+download-biber-wasm:
+	mkdir -p build/wasm
+	wget -P build/wasm -nc $(addprefix $(URLRELEASE)/,biber.js)
+	-wget -P build/wasm -nc $(addprefix $(URLRELEASE)/,biber.wasm)
+
 .PHONY: wasm-all
 wasm-all: wasm wasm-pdftex wasm-xetex
 
@@ -724,7 +741,8 @@ dist-wasm:
 	-cp build/wasm/texlive-basic.js.providespackage.txt \
 	    build/wasm/texlive-recommended.js.providespackage.txt \
 	    build/wasm/texlive-extra.js.providespackage.txt $@
-	-cp web/busytex_pipeline.js web/busytex_worker.js $@
+	-cp web/busytex_pipeline.js web/busytex_worker.js web/busytex_biber.js $@
+	-cp build/wasm/biber.js build/wasm/biber.wasm $@
 
 dist-native-full: build/native/busytex
 	mkdir -p $@

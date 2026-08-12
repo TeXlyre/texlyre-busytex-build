@@ -1,0 +1,59 @@
+diff --git a/iperlsys.h b/iperlsys.h
+index 40ff8a31..9c92393a 100644
+--- a/iperlsys.h
++++ b/iperlsys.h
+@@ -1119,7 +1119,12 @@ struct IPerlProcInfo
+ #  define PerlProc_waitpid(p,s,f) waitpid((p), (s), (f))
+ #  define PerlProc_setjmp(b, n) Sigsetjmp((b), (n))
+ #  define PerlProc_longjmp(b, n)Siglongjmp((b), (n))
++#ifdef __EMSCRIPTEN__
++void (*Perl_Emscripten_signal(int, void (*)(int)))(int);
++#  define PerlProc_signal(n, h) Perl_Emscripten_signal((n), (h))
++#else
+ #  define PerlProc_signal(n, h) signal((n), (h))
++#endif
+ #  define PerlProc_fork()       my_fork()
+ #  define PerlProc_getpid()     getpid()
+ #  define PerlProc_gettimeofday(t,z)    gettimeofday((t),(z))
+diff --git a/perl.h b/perl.h
+index 4ef161db..8acf412a 100644
+--- a/perl.h
++++ b/perl.h
+@@ -881,7 +881,7 @@ symbol would not be defined on C<L</EBCDIC>> platforms.
+ #define _(args) args
+ #define I_LIMITS
+ #define I_STDARG
+-#define STANDARD_C
++#define STANDARD_C 1
+ #endif
+ 
+ /* By compiling a perl with -DNO_TAINT_SUPPORT or -DSILENT_NO_TAINT_SUPPORT,
+@@ -3531,7 +3531,7 @@ typedef struct padname PADNAME;
+    and then they have the gall to warn that a value computed is not used. Hence
+    cast to void.  */
+ #    define PERL_FPU_INIT (void)fpsetmask(0)
+-#  elif defined(SIGFPE) && defined(SIG_IGN) && !defined(PERL_MICRO)
++#  elif defined(SIGFPE) && defined(SIG_IGN) && !defined(PERL_MICRO) && !defined(__EMSCRIPTEN__)
+ #    define PERL_FPU_INIT       PL_sigfpe_saved = (Sighandler_t) signal(SIGFPE, SIG_IGN)
+ #    define PERL_FPU_PRE_EXEC   { Sigsave_t xfpe; rsignal_save(SIGFPE, PL_sigfpe_saved, &xfpe);
+ #    define PERL_FPU_POST_EXEC    rsignal_restore(SIGFPE, &xfpe); }
+diff --git a/util.c b/util.c
+index 3c1cae40..db20cc21 100644
+--- a/util.c
++++ b/util.c
+@@ -2988,6 +2988,15 @@ Perl_rsignal_restore(pTHX_ int signo, Sigsave_t *save)
+ 
+ #else /* !HAS_SIGACTION */
+ 
++#ifdef __EMSCRIPTEN__
++void (*Perl_Emscripten_signal(int sig, void (*func)(int)))(int) {
++    if (sig==14)
++        return signal(sig, func);
++    errno = ENOSYS;
++    return SIG_ERR;
++}
++#endif
++
+ Sighandler_t
+ Perl_rsignal(pTHX_ int signo, Sighandler_t handler)
+ {

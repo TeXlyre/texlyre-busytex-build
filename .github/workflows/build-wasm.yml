@@ -10,6 +10,10 @@ on:
       texlivefullreleasetag:
         description: 'texlive-full release tag carrying the font assets'
         required: true
+      biberwasmreleasetag:
+        description: 'biber wasm release tag from build-biber-wasm (leave empty to ship without biber)'
+        required: false
+        default: ''
       privaterepo:
         description: 'Use authenticated download (required for private repos)'
         type: boolean
@@ -94,6 +98,10 @@ jobs:
         env:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
         run: make wasm
+
+      - name: Download biber wasm
+        if: ${{ github.event.inputs.biberwasmreleasetag != '' }}
+        run: make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.biberwasmreleasetag }} download-biber-wasm
 
       - name: Create packages and dist
         run: |

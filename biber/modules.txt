@@ -1,0 +1,37 @@
+# CPAN XS modules biber loads at runtime, determined by instrumenting a real
+# biber run and reading @DynaLoader::dl_shared_objects. Tool mode and a .bcf run
+# load an identical set of 40 shared objects - 19 core, 21 CPAN - so the closure
+# is complete.
+#
+# Fields: <Module::Name> <version> [extra]
+#
+# The version must match the .pm exactly: it is passed as -DVERSION/-DXS_VERSION
+# and the XS bootstrap rejects a mismatch with "object version 0 does not match
+# bootstrap parameter". Tarballs are resolved through fastapi.metacpan.org, so
+# no author ids are hardcoded here.
+#
+# <extra> is either an emcc flag, or one of the three external-library keywords
+# handled specially in build_biber.sh: btparse, sombok, libxml2.
+
+Class::XSAccessor       1.19
+Clone                   0.46
+DateTime                1.65
+List::MoreUtils::XS     0.430
+List::SomeUtils::XS     0.58
+Package::Stash::XS      0.30
+Params::Util            1.102
+Params::Validate::XS    1.31        -Ic
+PerlIO::utf8_strict     0.010
+Ref::Util::XS           0.117
+Sort::Key               1.33
+Sub::Identify           0.14
+Sub::Name               0.27
+Text::CSV_XS            1.53
+Variable::Magic         0.63
+XString                 0.005
+autovivification        0.18
+
+# External C library, merged into the extension archive after the XS build.
+Text::BibTeX            0.89        btparse
+Unicode::LineBreak      2019.001    sombok
+XML::LibXML             2.0134      libxml2
