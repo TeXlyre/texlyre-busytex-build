@@ -10,7 +10,7 @@ URL_texlive = https://github.com/TeX-Live/texlive-source/archive/refs/heads/tags
 #URL_texlive_full_iso = https://tug.ctan.org/systems/texlive/Images/texlive2023-20230313.iso
 #URL_texlive_full_iso_cache = https://github.com/busytex/busytex/releases/download/texlive2023-20230313.iso/texlive2023-20230313.iso.00 ...
 URL_expat            = https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz
-URL_fontconfig       = https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.13.96.tar.gz
+URL_fontconfig = https://github.com/TeXlyre/texlyre-busytex-build/releases/download/fontconfig-2.13.96/fontconfig-2.13.96.tar.gz
 
 BUSYTEX_BIN          = busytex busytexextra
 BUSYTEX_TEXBIN       = ctangle otangle tangle tangleboot ctangleboot tie
@@ -26,6 +26,11 @@ CXXFLAGS_native      = -fexceptions -frtti
 CFLAGS_OPT_wasm      = -Oz
 
 ROOT                := $(CURDIR)
+
+PERL_VERSION_BIBER  := 5.38.2
+EMPERL_REPO         := https://github.com/haukex/emperl5.git
+EMPERL_BRANCH       := emperl_v5.30.0
+BIBER_VERSION       := 2.19
 EMROOT              := $(dir $(shell which emcc))
 
 BUSYTEX_native       = $(abspath build/native/busytex)
@@ -217,7 +222,7 @@ BUSYTEXIZE_A = find $(1) -name $(2) -exec sh -c 'mv {} `dirname {}`/$(notdir $@)
 
 source/texlive.txt source/expat.txt source/fontconfig.txt:
 	mkdir -p $(basename $@)
-	curl -L $(URL_$(notdir $(basename $@))) | tar -xzf - -C $(basename $@) --strip-components=1
+	curl -fL $(URL_$(notdir $(basename $@))) | tar -xzf - -C $(basename $@) --strip-components=1
 	find $(basename $@) > $@
 
 source/texmfrepo.txt:
@@ -229,7 +234,8 @@ source/texmfrepo.txt:
 	bsdtar -xf source/texlive2026.iso -C $(basename $@)
 	find $(basename $@) > $@
 
-source/texlive.patched: source/texlive.txt
+source/texlive.patched: source/texlive.txt scripts/patch_xetex_font_index.py
+	$(PYTHON) scripts/patch_xetex_font_index.py --texlive-source source/texlive
 	touch $@
 
 build/%/texlive.configured: source/texlive.patched
@@ -359,12 +365,13 @@ build/%/texlive/texk/bibtex-x/busytex_bibtex8.a: build/%/texlive.configured
 	$(MAKE_$*) -C $(dir $@) bibtex8-bibtex.o $(OPTS_BIBTEX_$*)
 	$(AR_$*) -crs $@ $(dir $@)/bibtex8-*.o
 
-build/%/busytex build/%/busytex.js:
+build/%/busytex build/%/busytex.js: busytex.c kpse_remote.c font_index.cpp kpse_remote.js
 	mkdir -p $(dir $@)
 	$(CC_$*)  -o    $(basename $@).o -c busytex.c  $(OPTS_BUSYTEX_COMPILE_$*) $(CFLAGS_OPT_$*) -I$(abspath build/$*/texlive/libs/icu/include)
 	$(CC_$*)  -o    build/$*/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_$*)
+	$(CXX_$*) -o    build/$*/font_index.o -c font_index.cpp $(CFLAGS_OPT_$*)
 # 	$(CXX_$*) -o $@ $(basename $@).o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
-	$(CXX_$*) -o $@ $(basename $@).o build/$*/kpse_remote.o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
+	$(CXX_$*) -o $@ $(basename $@).o build/$*/kpse_remote.o build/$*/font_index.o $(addprefix build/$*/texlive/texk/web2c/, $(OBJ_XETEX) $(OBJ_PDFTEX) $(OBJ_LUAHBTEX)) $(addprefix build/$*/, $(OBJ_BIBTEX) $(OBJ_DVIPDF) $(OBJ_DEPS) $(OBJ_MAKEINDEX))  $(addprefix build/$*/texlive/texk/kpathsea/, $(OBJ_KPATHSEA))   $(OPTS_BUSYTEX_LINK_$*)
 	tar -cf $(basename $@).tar build/$*/texlive/texk/web2c/*.c
 
 # Minimal pdfTeX-only build
@@ -383,12 +390,13 @@ build/wasm/pdftex.js:
 OBJ_DEPS_XETEX = $(addprefix texlive/libs/, harfbuzz/libharfbuzz.a graphite2/libgraphite2.a teckit/libTECkit.a libpng/libpng.a) fontconfig/src/.libs/libfontconfig.a $(addprefix texlive/libs/, freetype2/libfreetype.a zlib/libz.a icu/icu-build/lib/libicuuc.a icu/icu-build/lib/libicudata.a) texlive/texk/kpathsea/.libs/libkpathsea.a expat/libexpat.a texlive/texk/dvipdfm-x/busytex_xdvipdfmx.a
 OPTS_BUSYTEX_LINK_XETEX_wasm = $(OPTS_BUSYTEX_LINK) -Wl,--unresolved-symbols=ignore-all -Wl,--error-limit=0 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sINVOKE_RUN=0 -sASSERTIONS=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sFORCE_FILESYSTEM=1 -sLZ4=1 -sMODULARIZE=1 -sEXPORT_NAME=xetex -sEXPORTED_FUNCTIONS='["_main", "_flush_streams"]' -sEXPORTED_RUNTIME_METHODS='["callMain", "FS", "ENV", "LZ4",  "PATH", "HEAP32", "HEAP8", "HEAP16", "HEAPU8", "FS_createPath", "FS_createDataFile", "FS_createPreloadedFile", "FS_createLazyFile", "FS_unlink"]' --js-library $(ROOT)/kpse_remote.js -Wl,--wrap=kpse_find_file
 
-build/wasm/xetex.js:
+build/wasm/xetex.js: busytex.c kpse_remote.c font_index.cpp kpse_remote.js
 	mkdir -p $(dir $@)
 	$(CC_wasm) -o build/wasm/xetex.o -c busytex.c -DBUSYTEX_XETEX -DBUSYTEX_XDVIPDFMX $(CFLAGS_OPT_wasm)
 	$(CC_wasm) -o build/wasm/kpse_remote.o -c kpse_remote.c $(CFLAGS_OPT_wasm)
+	$(CXX_wasm) -o build/wasm/font_index.o -c font_index.cpp $(CFLAGS_OPT_wasm)
 # 	$(CXX_wasm) -o $@ build/wasm/xetex.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
-	$(CXX_wasm) -o $@ build/wasm/xetex.o build/wasm/kpse_remote.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
+	$(CXX_wasm) -o $@ build/wasm/xetex.o build/wasm/kpse_remote.o build/wasm/font_index.o $(addprefix build/wasm/texlive/texk/web2c/, $(OBJ_XETEX)) $(addprefix build/wasm/, $(OBJ_DEPS_XETEX)) $(addprefix build/wasm/texlive/texk/kpathsea/, $(OBJ_KPATHSEA)) $(OPTS_BUSYTEX_LINK_XETEX_wasm)
 
 build/native/busytexextra: build/native/busytex build/texlive-extra.txt 
 	$(PYTHON) packfs.py -i build/texlive-extra/ -o packfs.h --prefix=/texlive --ld=$(LD_native) --exclude '\.a|\.so|\.pod|\.ld|\.h|\.log'
@@ -525,13 +533,16 @@ build/texlive-%.txt: build/texlive-%.profile source/texmfrepo.txt
 	echo '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>/texlive/texmf-dist/fonts/opentype</dir><dir>/texlive/texmf-dist/fonts/truetype</dir><dir>/texlive/texmf-dist/fonts/type1</dir></fontconfig>' > $(basename $@)/texmf-dist/texmf-var/fonts/conf/fonts.conf
 	-mv $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/lualatex.fmt $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt
 	ls $(basename $@)/texmf-dist/texmf-var/web2c/*/*.fmt
+	$(if $(filter full,$*),sh scripts/build_luaotfload_db.sh $(basename $@))
 	rm -rf $(addprefix $(basename $@)/texmf-dist/texmf-var/web2c/, pdftex/latex.fmt pdftex/etex.fmt pdftex/pdfetex.fmt pdftex/pdftex.fmt pdftex/mptopdf.fmt pdftex/latex-dev.fmt pdftex/pdflatex-dev.fmt xetex/xetex.fmt xetex/xelatex-dev.fmt luahbtex/luahbtex.fmt luahbtex/lualatex-dev.fmt) $(addprefix $(basename $@)/, bin/ tlpkg/ texmf-dist/doc/ texmf-dist/scripts/ texmf-dist/source/ install-tl install-tl.log)
-	# Never ship native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
+	# Never include native Lua* formats into wasm (Lua bytecode in .fmt is not portable)
 	rm -f $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.fmt \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luahbtex/*.log \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luatex/*.fmt \
 	      $(basename $@)/texmf-dist/texmf-var/web2c/luatex/*.log
 	# --------------------------------------------------------------------------------
+	$(if $(filter full,$*),$(PYTHON) scripts/build_font_index.py --texmf-dist $(basename $@)/texmf-dist --output $(basename $@)/texmf-dist/busytex-fontindex.txt)
+	$(if $(filter full,$*),sh scripts/check_font_assets.sh full $(basename $@)/texmf-dist)
 	mkdir -p $(dir $@)
 	find $(basename $@) > $@
 	tar -czf $(basename $@).tar.gz $(basename $@)
@@ -630,6 +641,18 @@ wasm-xetex:
 	$(MAKE) build/wasm/busytexapplets
 	$(MAKE) build/wasm/xetex.js
 
+.PHONY: wasm-biber
+wasm-biber:
+	PERL_VERSION=$(PERL_VERSION_BIBER) BIBER_VERSION=$(BIBER_VERSION) BUILD=$(ROOT)/build/wasm/biber biber/build_biber.sh
+	cp build/wasm/biber/biber.js build/wasm/biber.js
+	-cp build/wasm/biber/biber.wasm build/wasm/biber.wasm
+
+.PHONY: download-biber-wasm
+download-biber-wasm:
+	mkdir -p build/wasm
+	wget -P build/wasm -nc $(addprefix $(URLRELEASE)/,biber.js)
+	-wget -P build/wasm -nc $(addprefix $(URLRELEASE)/,biber.wasm)
+
 .PHONY: wasm-all
 wasm-all: wasm wasm-pdftex wasm-xetex
 
@@ -666,14 +689,27 @@ build/versions.txt:
 	echo emscripten: $(EMSCRIPTEN_VERSION)                             >> $@
 
 .PHONY: smoke-native
+install-font-assets:
+	test -s build/fontassets/pdftex.map
+	test -s build/fontassets/luaotfload-names.lua.gz
+	$(foreach name,basic recommended extra,\
+	  mkdir -p build/texlive-$(name)/texmf-dist/texmf-var/fonts/map/pdftex/updmap \
+	           build/texlive-$(name)/texmf-dist/texmf-var/luatex-cache/generic/names \
+	           build/texlive-$(name)/texmf-dist/tex/luatex/luaotfload; \
+	  cp build/fontassets/pdftex.map build/texlive-$(name)/texmf-dist/texmf-var/fonts/map/pdftex/updmap/pdftex.map; \
+	  cp build/fontassets/luaotfload-names.lua.gz build/texlive-$(name)/texmf-dist/texmf-var/luatex-cache/generic/names/; \
+	  cp luaotfload.conf build/texlive-$(name)/texmf-dist/tex/luatex/luaotfload/; )
+
 smoke-native: build/native/busytex
 	-$(LDD_native) $(BUSYTEX_native)
 	$(BUSYTEX_native)
 	-$(foreach applet,xelatex pdflatex luahblatex lualatex bibtex8 xdvipdfmx kpsewhich kpsestat kpseaccess kpsereadlink,echo $(BUSYTEX_native) $(applet) --version; $(BUSYTEX_native) $(applet) --version; )
 
 .PHONY: smoke-wasm
-smoke-wasm: build/wasm/busytex.js build/wasm/texlive-basic.js
-	bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js
+smoke-wasm: build/wasm/busytex.js build/wasm/texlive-basic.js build/wasm/texlive-recommended.js
+	sh scripts/check_font_assets.sh wasm build/wasm/busytex.wasm
+	sh scripts/make_remote_font_fixture.sh build/wasm/remotefont
+	BUSYTEX_REMOTE_DIR=$(abspath build/wasm/remotefont) bash scripts/test_wasm.sh build/wasm/busytex.js build/wasm/texlive-basic.js build/wasm/texlive-recommended.js
 	
 ################################################################################################################
 
@@ -705,7 +741,8 @@ dist-wasm:
 	-cp build/wasm/texlive-basic.js.providespackage.txt \
 	    build/wasm/texlive-recommended.js.providespackage.txt \
 	    build/wasm/texlive-extra.js.providespackage.txt $@
-	-cp web/busytex_pipeline.js web/busytex_worker.js $@
+	-cp web/busytex_pipeline.js web/busytex_worker.js web/busytex_biber.js $@
+	-cp build/wasm/biber.js build/wasm/biber.wasm $@
 
 dist-native-full: build/native/busytex
 	mkdir -p $@

@@ -140,6 +140,11 @@ class BusytexBibtexResolver {
         return files.some(f => f.path.endsWith('.tex') && typeof (f.contents) == 'string' && bib_tex_commands.some(b => f.contents.includes(b)));
         // files.some(({path, contents}) => contents != null && path.endsWith('.bib'));
     }
+
+    resolve_backend(files, biblatex_backend_options = ['backend=biber', 'backend = biber']) {
+        const uses_biber = files.some(f => f.path.endsWith('.tex') && typeof (f.contents) == 'string' && biblatex_backend_options.some(b => f.contents.includes(b)));
+        return uses_biber ? 'biber' : 'bibtex8';
+    }
 }
 
 class BusytexPipeline {
@@ -241,6 +246,7 @@ class BusytexPipeline {
             },
         };
         this.supported_drivers = ['xetex_bibtex8_dvipdfmx', 'pdftex_bibtex8', 'luahbtex_bibtex8', 'luatex_bibtex8'];
+        this.biber = null;
 
         this.error_messages_fatal = ['Fatal error occurred', 'That was a fatal error', ':fatal:', '! Undefined control sequence.', 'undefined old font command'];
         this.error_messages_all = this.error_messages_fatal.concat(['no output PDF file produced', 'No pages of output.']);
@@ -259,6 +265,7 @@ class BusytexPipeline {
         this.env = {
             TEXMFDIST: this.dir_texmfdist,
             TEXMFVAR: this.dir_texmfvar,
+            TEXMFCACHE: this.dir_texmfvar,
             TEXMFCNF: this.dir_cnf,
             TEXMFLOG: this.texmflog,
             FONTCONFIG_PATH: this.dir_fontconfig,
@@ -432,6 +439,29 @@ class BusytexPipeline {
         return this.rerun_patterns.some(p => log_text.includes(p));
     }
 
+    async _run_biber(FS, tex_path, files, verbose_args) {
+        const bcf_path = tex_path.replace('.tex', '.bcf');
+        const bbl_path = tex_path.replace('.tex', '.bbl');
+
+        if (!FS.analyzePath(bcf_path).exists) {
+            this.print('$ # no .bcf produced, biber has nothing to do');
+            return 0;
+        }
+
+        const inputs = [{ path: bcf_path, contents: FS.readFile(bcf_path, { encoding: 'utf8' }) }];
+        for (const f of files) {
+            if (f.path.endsWith('.bib') && f.contents != null)
+                inputs.push({ path: f.path, contents: f.contents });
+        }
+
+        const bbl = await this.biber.run(bcf_path, inputs, verbose_args);
+        if (bbl == null)
+            return 1;
+
+        FS.writeFile(bbl_path, bbl);
+        return 0;
+    }
+
     _run_cmd(Module, FS, cmd, error_messages, verbose, log_path, blg_path, aux_path, bbl_path, mem_header, logs) {
         const is_bibtex = cmd[0].startsWith('bibtex');
         const cmd_log_path = is_bibtex ? blg_path : log_path;
@@ -504,13 +534,18 @@ class BusytexPipeline {
         Module.kpse_remote_register_misses(keys);
     }
 
-    async compile(files, main_tex_path, bibtex, makeindex = null, rerun = null, verbose, driver, data_packages_js = [], remote_endpoint = '', shell_escape = false) {
+    async compile(files, main_tex_path, bibtex, makeindex = null, rerun = null, verbose, driver, data_packages_js = [], remote_endpoint = '', shell_escape = false, biber = null) {
         if (!this.supported_drivers.includes(driver))
             throw new Error(`Driver [${driver}] is not supported, only [${this.supported_drivers}] are supported`);
         this.print(`New compilation started: [${main_tex_path}]`);
 
         if (bibtex === null)
             bibtex = this.bibtex_resolver.resolve(files);
+
+        const bib_backend = biber === null ? this.bibtex_resolver.resolve_backend(files) : (biber ? 'biber' : 'bibtex8');
+        if (bib_backend == 'biber' && this.biber == null) {
+            this.print('biber backend requested but no biber module was configured, falling back to bibtex8');
+        }
 
         const resolved = await this.data_package_resolver.resolve(files, main_tex_path, data_packages_js);
         const filter_map = (f, return_tex_package = true) => Object.entries(resolved).filter(([tex_package, v]) => f(v)).map(([tex_package, v]) => return_tex_package ? tex_package : v.source);
@@ -606,7 +641,10 @@ class BusytexPipeline {
         ({ exit_code, log: last_log } = run(initial, this.error_messages_fatal));
 
         if (exit_code == 0 && bibtex) {
-            ({ exit_code } = run(bibtex8_cmd, this.error_messages_fatal));
+            if (bib_backend == 'biber' && this.biber != null)
+                exit_code = await this._run_biber(FS, tex_path, files, verbose_args_for('bibtex8'));
+            else
+                ({ exit_code } = run(bibtex8_cmd, this.error_messages_fatal));
 
             if (exit_code == 0 && this.read_all_text(FS, bbl_path).trim() == '') {
                 this.print('$ # bibtex found no citation commands, skipping extra passes');

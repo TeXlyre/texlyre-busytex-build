@@ -124,6 +124,15 @@ make build/wasm/busytex.js
 
 Then run the production server following the [server instructions](./texlive-server/README.md) from within the `texlive-server` directory.
 
+### Remote fonts
+
+The full TeX Live build creates `busytex-fontindex.txt` and places it in the **served `texmf-dist` on the remote server**. XeTeX fetches this index when a font is not available locally, finds the matching face, then downloads only that font file through remote `kpse`.
+
+Two other files are built from the full tree and published as release assets: `pdftex.map` and `luaotfload-names.lua.gz`. However, unlike the font index, these are **installed into every wasm data package** by `make install-font-assets`, allowing pdfTeX/xdvipdfmx and LuaHBTeX to resolve remote fonts.
+
+Luaotfload rescanning is disabled, and `TEXMFCACHE` is pinned to the generated tree so its prebuilt database remains available. `scripts/check_font_assets.sh` validates all three assets, and `make smoke-wasm` tests remote font lookup end-to-end.
+
+
 ---
 
 ## Roadmap

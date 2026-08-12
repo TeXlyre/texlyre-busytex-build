@@ -1,0 +1,23 @@
+diff --git a/ext/Errno/Errno_pm.PL b/ext/Errno/Errno_pm.PL
+index ae647d5f..9fb9d521 100644
+--- a/ext/Errno/Errno_pm.PL
++++ b/ext/Errno/Errno_pm.PL
+@@ -84,6 +84,7 @@ sub process_file {
+ 	$err{$1} = 1
+ 	    if /$pat/;
+     }
++    delete $err{EMSCRIPTEN} if $^O eq 'emscripten'; # not an error code
+ 
+     close(FH);
+ }
+@@ -125,6 +126,10 @@ sub get_files {
+     } elsif ($^O eq 'os390') {
+ 	# OS/390 C compiler doesn't generate #file or #line directives
+         # and it does not tag the header as 1047 (EBCDIC), so make a local
++    } elsif ($^O eq 'emscripten') {
++	my $f = "$ENV{EMSCRIPTEN}/system/lib/libc/musl/arch/emscripten/bits/errno.h";
++	die "didn't find $f" unless -f $f;
++	$file{$f} = 1;
+         # copy and tag it
+         my $cp = `cp /usr/include/errno.h ./errno.h`;
+         my $chtag = `chtag -t -cIBM-1047 ./errno.h`;

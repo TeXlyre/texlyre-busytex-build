@@ -1,0 +1,100 @@
+name: build-biber-wasm
+
+# Builds biber as a standalone wasm module and publishes biber.js / biber.wasm
+# as a release, the way build-native does for the native binaries. biber changes
+# rarely and the job compiles perl twice (host + wasm), so it is kept out of
+# build-wasm, which consumes the published artifact instead.
+
+on:
+  workflow_dispatch:
+    inputs:
+      perlversion:
+        description: 'perl version to cross-compile'
+        required: true
+        default: '5.38.2'
+      biberversion:
+        description: 'biber release tag (without the v)'
+        required: true
+        default: '2.19'
+
+env:
+  EMSCRIPTEN_VERSION: 5.0.4
+  PERL_VERSION: ${{ github.event.inputs.perlversion }}
+  BIBER_VERSION: ${{ github.event.inputs.biberversion }}
+
+jobs:
+
+  build-biber-wasm:
+    runs-on: ubuntu-24.04
+    steps:
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/lib/jvm
+          df -h
+
+      - uses: actions/checkout@v4
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl xz-utils cpanminus
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EMSCRIPTEN_VERSION }}
+
+      - name: Check toolchain
+        run: |
+          emcc --version
+          llvm-ar --version || echo "llvm-ar comes from the emsdk clang; see AR below"
+
+      - name: Build biber wasm
+        env:
+          # emsdk ships its own llvm-ar; using the host one produces archives the
+          # wasm linker rejects.
+          AR: ${{ env.EMSDK }}/upstream/bin/llvm-ar
+        run: make wasm-biber
+
+      - name: Smoke test
+        run: |
+          cd build/wasm/biber
+          cat > smoke.bib <<'BIB'
+          @article{knuth1984,
+            author  = {Knuth, Donald E.},
+            title   = {Literate Programming},
+            journal = {The Computer Journal},
+            year    = {1984},
+          }
+          BIB
+          EMPERL_PREFIX=$PWD/prefix EMPERL_OUTPUTDIR=/ \
+            node biber.js -e 'use XML::LibXML; use Text::BibTeX; use Unicode::GCString; print "xs ok\n"'
+          EMPERL_PREFIX=$PWD/prefix EMPERL_OUTPUTDIR=/ \
+            node biber.js prefix/bin/biber --version
+          EMPERL_PREFIX=$PWD/prefix EMPERL_OUTPUTDIR=/ \
+            node biber.js prefix/bin/biber --tool --output-format=bibtex --nolog smoke.bib
+          test -s smoke_bibertool.bib && echo "biber produced output"
+
+      - name: Package
+        run: |
+          mkdir -p dist-biber
+          cp build/wasm/biber/biber.js dist-biber/
+          cp build/wasm/biber/biber.wasm dist-biber/ 2>/dev/null || true
+          cp web/busytex_biber.js dist-biber/
+          tar -czf biber-wasm.tar.gz -C dist-biber .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: biber-wasm
+          path: |
+            build/wasm/biber/biber.js
+            build/wasm/biber/biber.wasm
+            web/busytex_biber.js
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=build_biber_wasm_${GITHUB_SHA}_${GITHUB_RUN_ID}_${GITHUB_RUN_NUMBER}
+          gh release create "$tag" --title "$tag" --notes "biber $BIBER_VERSION on perl $PERL_VERSION, wasm" \
+            build/wasm/biber/biber.js biber-wasm.tar.gz
