@@ -40,20 +40,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential curl xz-utils cpanminus
 
-      - uses: mymindstorm/setup-emsdk@v14
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v13
         with:
-          version: ${{ env.EMSCRIPTEN_VERSION }}
+          version: ${{env.EMSCRIPTEN_VERSION}}
 
       - name: Check toolchain
         run: |
           emcc --version
-          llvm-ar --version || echo "llvm-ar comes from the emsdk clang; see AR below"
+          emar --version
 
       - name: Build biber wasm
         env:
-          # emsdk ships its own llvm-ar; using the host one produces archives the
-          # wasm linker rejects.
-          AR: ${{ env.EMSDK }}/upstream/bin/llvm-ar
+          # emsdk's llvm-ar wrapper. The host ar produces archives the wasm
+          # linker rejects, and llvm-ar itself is not on PATH after activation.
+          AR: emar
         run: make wasm-biber
 
       - name: Smoke test
