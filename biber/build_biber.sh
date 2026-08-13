@@ -95,7 +95,10 @@ build_xs_modules() {
     export PERL_WASM_PREFIX
     export PERL_WASM_VERSION=$PERL_VERSION
     export PERL_WASM_LIB=$PERL_SRC/lib
-    export HOST_PERL=$HOST_PERL_BUILD/miniperl
+    # miniperl from the cross build, so xsubpp matches the target perl exactly.
+    # It needs -I: its own @INC is just '.', which is why Config.pm is missing.
+    export HOST_PERL="$HOST_PERL_BUILD/miniperl -I$PERL_SRC/lib"
+    export HOST_TYPEMAP=$PERL_SRC/lib/ExtUtils/typemap
 
     # PerlIO::utf8_strict exports PerlIOBase_flush_linebuf, which collides with
     # the identically named symbol in perl's own PerlIO layer at link time.

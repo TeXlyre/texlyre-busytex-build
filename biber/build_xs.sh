@@ -19,10 +19,10 @@ PERL_WASM_PREFIX=${PERL_WASM_PREFIX:?set PERL_WASM_PREFIX}
 PERL_WASM_VERSION=${PERL_WASM_VERSION:?set PERL_WASM_VERSION}
 PERL_WASM_LIB=${PERL_WASM_LIB:?set PERL_WASM_LIB}
 HOST_PERL=${HOST_PERL:-perl}
+HOST_TYPEMAP=${HOST_TYPEMAP:?set HOST_TYPEMAP}
 AR=${AR:-llvm-ar}
 
 CORE=$PERL_WASM_PREFIX/lib/$PERL_WASM_VERSION/wasm/CORE
-HOST_TYPEMAP=$($HOST_PERL -MConfig -e 'print "$Config{privlib}/ExtUtils/typemap"')
 LEAF=${MOD##*::}
 PATHPART=${MOD//:://}
 OUT=$PERL_WASM_LIB/auto/$PATHPART
@@ -42,7 +42,7 @@ for xs in $(find . -maxdepth 1 -name '*.xs'); do
         my @tm = ($tmap);
         push @tm, $extra if $extra;
         ExtUtils::ParseXS->new->process_file(filename => $f, output => $o, typemap => \@tm);
-    ' "$xs" "${xs%.xs}.c" "$HOST_TYPEMAP" "$tm" 2>/dev/null
+    ' "$xs" "${xs%.xs}.c" "$HOST_TYPEMAP" "$tm"
     [ -s "${xs%.xs}.c" ] || { echo "XSUBPP-FAIL $MOD $xs"; exit 2; }
     generated="$generated ${xs%.xs}.c"
 done
