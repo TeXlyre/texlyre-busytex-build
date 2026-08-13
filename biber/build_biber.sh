@@ -106,6 +106,12 @@ build_xs_modules() {
         "$SRCDIR/PerlIO-utf8_strict/utf8_strict.xs"
     rm -f "$SRCDIR/PerlIO-utf8_strict/utf8_strict.c"
 
+    # List::MoreUtils::XS generates LMUconfig.h from its Makefile.PL, which is
+    # never otherwise run because the XS is built out of tree. Probed with the
+    # host compiler; the header only records a few HAVE_ feature defines.
+    ( cd "$SRCDIR/List-MoreUtils-XS" && [ -f LMUconfig.h ] || perl Makefile.PL >/dev/null )
+    [ -f "$SRCDIR/List-MoreUtils-XS/LMUconfig.h" ] || { echo "LMUconfig.h not generated"; exit 1; }
+
     SOMBOK_SRC=$SRCDIR/Unicode-LineBreak/sombok
     [ -d "$SOMBOK_SRC/lib" ] || SOMBOK_SRC=$SRCDIR/sombok
     SOMBOK_SRC=$SOMBOK_SRC DEPS_PREFIX=$DEPS_PREFIX SRCDIR=$SRCDIR bash "$ROOT/build_deps.sh" sombok

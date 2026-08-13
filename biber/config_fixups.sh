@@ -20,6 +20,16 @@ for sym in setproctitle setruid setrgid fdclose malloc_size malloc_good_size; do
     sed -i -E "s/^d_${sym}='define'/d_${sym}='undef'/" "$CONFIG_SH"
 done
 
+# hints/emscripten.sh sets d_sigaction='undef', which was true of emscripten
+# 1.37 but is not any more: sigaction, siginfo_t and SA_SIGINFO are all present
+# and a real sigaction call links and returns 0. Leaving it undef makes perl.h
+# fall back to its dummy one-field Siginfo_t while ext/POSIX/POSIX.xs still
+# compiles its sigaction branch, which it guards on SA_SIGINFO from the system
+# header alone - the two disagree and POSIX.o fails with incompatible function
+# pointer types on act.sa_sigaction.
+#
+# Signals stay effectively disabled regardless: PerlProc_signal is still routed
+# through Perl_Emscripten_signal by patches/02.
 sed -i -E "s/^d_sigaction='undef'/d_sigaction='define'/" "$CONFIG_SH"
 
 set_var() {
