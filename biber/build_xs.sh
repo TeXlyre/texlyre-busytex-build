@@ -32,11 +32,23 @@ mkdir -p "$OUT"
 objs=""
 generated=""
 
-# Only top-level .xs files: XS/*.xs and similar are pulled in via INCLUDE: and
-# must not be compiled as translation units of their own.
-for xs in $(find . -maxdepth 1 -name '*.xs'); do
+# Prefer top-level .xs: where they exist, any others (Class::XSAccessor's
+# XS/*.xs) are pulled in via INCLUDE: and must not be compiled as translation
+# units of their own. Where none exist, the dist keeps its XS in a subdirectory
+# (Params::Validate::XS in lib/, Text::BibTeX in xscode/) and those are used.
+xs_files=$(find . -maxdepth 1 -name '*.xs')
+if [ -z "$xs_files" ]; then
+    xs_files=$(find . -name '*.xs' -not -path './t/*')
+fi
+[ -n "$xs_files" ] || { echo "NO-XS $MOD"; exit 2; }
+
+for xs in $xs_files; do
+    # Absolute: ParseXS resolves a relative typemap against the .xs file's
+    # directory, not the cwd, so Text::BibTeX's top-level typemap is invisible
+    # from xscode/BibTeX.xs.
     tm=""
-    [ -f typemap ] && tm=typemap
+    [ -f "$(dirname "$xs")/typemap" ] && tm="$PWD/$(dirname "$xs")/typemap"
+    [ -z "$tm" ] && [ -f typemap ] && tm="$PWD/typemap"
     $HOST_PERL -MExtUtils::ParseXS -e '
         my ($f, $o, $tmap, $extra) = @ARGV;
         my @tm = ($tmap);
@@ -47,7 +59,17 @@ for xs in $(find . -maxdepth 1 -name '*.xs'); do
     generated="$generated ${xs%.xs}.c"
 done
 
-for c in $(find . -maxdepth 1 -name '*.c' -not -name 'conftest*') $generated; do
+# Top-level .c, plus the .c siblings of each .xs: Text::BibTeX keeps
+# btxs_support.c next to xscode/BibTeX.xs, and the generated .c lands there too.
+c_files=$(find . -maxdepth 1 -name '*.c' -not -name 'conftest*')
+for xs in $xs_files; do
+    d=$(dirname "$xs")
+    [ "$d" = "." ] && continue
+    c_files="$c_files $(find "$d" -maxdepth 1 -name '*.c' -not -name 'conftest*')"
+done
+c_files=$(printf '%s\n' $c_files $generated | sort -u)
+
+for c in $c_files; do
     o=${c%.c}.o
     emcc -c -O1 -I. -I"$CORE" $EXTRA \
         -DVERSION="\"$MODVER\"" -DXS_VERSION="\"$MODVER\"" \
@@ -56,4 +78,9 @@ for c in $(find . -maxdepth 1 -name '*.c' -not -name 'conftest*') $generated; do
 done
 
 $AR rcs "$OUT/$LEAF.a" $objs || exit 4
+
+# An archive with no members is the signature of an .xs that was never found;
+# ar reports success and the failure only surfaces as a missing boot_ symbol at
+# link time.
+[ -n "$($AR t "$OUT/$LEAF.a")" ] || { echo "EMPTY-ARCHIVE $MOD"; exit 5; }
 echo "OK $MOD -> $OUT/$LEAF.a"

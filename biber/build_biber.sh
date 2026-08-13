@@ -195,14 +195,40 @@ link_biber() {
     install_perl_headers
 }
 
-# biber's pure-perl dependency tree. cpanm installs into the wasm prefix with
-# the host perl; only .pm files matter, every XS dependency is already linked in.
+# The perl half of everything that goes in the preload filesystem.
+#
+# The XS modules' .pm files are copied from the same sources their XS was built
+# from, so the perl side and the linked bootstrap always agree on version. They
+# are staged first so cpanm sees them as satisfied and does not try to build
+# those distributions natively - XML::LibXML in particular needs libxml2 headers
+# on the host and would otherwise abort the whole --installdeps run.
 install_biber_tree() {
     site=$PERL_WASM_PREFIX/lib/site_perl/$PERL_VERSION
-    mkdir -p "$site"
-    cpanm --notest --local-lib-contained "$BUILD/cpanlib" --installdeps "$SRCDIR/biber" || true
-    cp -r "$BUILD/cpanlib/lib/perl5/"* "$site/" 2>/dev/null || true
-    cp -r "$SRCDIR/biber/lib/"* "$site/"
+    staging=$BUILD/cpanlib/lib/perl5
+    mkdir -p "$site" "$staging"
+
+    grep -vE '^\s*(#|$)' "$ROOT/modules.txt" | while read -r mod ver extra; do
+        dir=$SRCDIR/$(echo "$mod" | sed 's/::/-/g')
+        [ -d "$dir/lib" ] && cp -r "$dir/lib/." "$staging/"
+
+        # Not exclusive: Clone and Text::CSV_XS have only a top-level .pm named
+        # after the last component of the module, and XML::LibXML has both, with
+        # LibXML.pm at the top and the sub-modules under lib/.
+        leaf=${mod##*::}
+        if [ -f "$dir/$leaf.pm" ]; then
+            sub=$(echo "${mod%::*}" | sed 's/::/\//g')
+            [ "$sub" = "$mod" ] && sub=.
+            mkdir -p "$staging/$sub"
+            cp "$dir/$leaf.pm" "$staging/$sub/"
+        fi
+    done
+
+    command -v cpanm >/dev/null || { echo "cpanm not found"; exit 1; }
+    cpanm --notest --no-man-pages --local-lib-contained "$BUILD/cpanlib" \
+        --installdeps "$SRCDIR/biber"
+
+    cp -r "$staging/." "$site/"
+    cp -r "$SRCDIR/biber/lib/." "$site/"
     install -D -m 755 "$SRCDIR/biber/bin/biber" "$PERL_WASM_PREFIX/bin/biber"
 }
 
