@@ -1,9 +1,5 @@
-// Loader for the standalone biber wasm module.
-//
-// biber is a perl interpreter with its XS dependencies statically linked, so it
-// cannot share busytex's main(). It is loaded lazily on the first .bcf run and
-// exchanges files with the busytex module through the caller, which copies the
-// .bcf and .bib in and the .bbl out.
+// Loader for the standalone biber wasm module, which cannot share busytex's
+// main() and is loaded lazily on the first .bcf run.
 
 export class BusytexBiber {
     constructor(biber_js, biber_wasm, print, script_loader) {
@@ -38,9 +34,8 @@ export class BusytexBiber {
         return Module;
     }
 
-    // files: [{path, contents}] written next to the .bcf, since biber resolves
-    // data sources relative to the control file. Returns the .bbl text, or null
-    // when biber exited non-zero.
+    // Data sources are resolved relative to the control file, so everything is
+    // written into one directory. Returns the .bbl text, or null on failure.
     async run(bcf_path, files, verbose_args = []) {
         const Module = await this.initialize();
         const { FS, PATH } = Module;

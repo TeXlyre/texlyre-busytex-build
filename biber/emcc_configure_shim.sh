@@ -1,9 +1,8 @@
 #!/bin/bash
-# Wrapper placed ahead of emcc on PATH while perl's Configure runs.
-# emcc <= 1.39 emitted extensionless output as JS with a node shebang and the
-# executable bit; 3.x does not, and Configure executes its test programs.
-# SINGLE_FILE avoids emscripten's fetch-based wasm loader, which breaks on
-# node >= 18 where fetch is global.
+# Placed ahead of emcc on PATH while perl's Configure runs. emcc <= 1.39 emitted
+# extensionless output as JS with a node shebang and the executable bit, and
+# Configure executes its test programs. SINGLE_FILE avoids the fetch-based wasm
+# loader, which breaks on node >= 18 where fetch is global.
 export NODE_PATH=${NODE_PATH:-/usr/share/nodejs}
 out=""; prev=""
 for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done

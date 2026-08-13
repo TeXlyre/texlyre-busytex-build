@@ -39,13 +39,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential curl xz-utils autoconf automake libtool pkg-config
-          # biber's pure-perl dependency closure, already resolved and mutually
-          # consistent, is taken from this package rather than fetched by cpanm.
+          # Supplies biber's pure-perl dependency closure in /usr/share/perl5.
           sudo apt-get install -y biber
-          test -f /usr/share/perl5/Biber.pm
-
-      # v13 to match build-wasm.yml: v14 fails with repeated "socket hang up"
-      # on the Node 24 runners.
+          
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v13
         with:
@@ -56,13 +52,10 @@ jobs:
           emcc --version
           emar --version
 
-      - name: Restore exec bits
-        run: chmod +x biber/*.sh
-
       - name: Build biber wasm
         env:
-          # emsdk's llvm-ar wrapper. The host ar produces archives the wasm
-          # linker rejects, and llvm-ar itself is not on PATH after activation.
+          # The host ar produces archives the wasm linker rejects, and llvm-ar
+          # is not on PATH after emsdk activation.
           AR: emar
         run: make wasm-biber
 
@@ -88,9 +81,8 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist-biber
-          cp build/wasm/biber/biber.js dist-biber/
-          cp build/wasm/biber/biber.wasm dist-biber/ 2>/dev/null || true
-          cp web/busytex_biber.js dist-biber/
+          cp build/wasm/biber/biber.js web/busytex_biber.js dist-biber/
+          cp build/wasm/biber/biber.wasm dist-biber/ || true
           tar -czf biber-wasm.tar.gz -C dist-biber .
 
       - uses: actions/upload-artifact@v4
