@@ -1,5 +1,5 @@
 diff --git a/ext/Errno/Errno_pm.PL b/ext/Errno/Errno_pm.PL
-index ae647d5f..9fb9d521 100644
+index ae647d5f..ea8eccf7 100644
 --- a/ext/Errno/Errno_pm.PL
 +++ b/ext/Errno/Errno_pm.PL
 @@ -84,6 +84,7 @@ sub process_file {
@@ -10,14 +10,21 @@ index ae647d5f..9fb9d521 100644
  
      close(FH);
  }
-@@ -125,6 +126,10 @@ sub get_files {
+@@ -122,6 +123,17 @@ sub get_files {
+     # VMS keeps its include files in system libraries
+     if ($^O eq 'VMS') {
+ 	push(@file, 'Sys$Library:DECC$RTLDEF.TLB');
++    } elsif ($^O eq 'emscripten') {
++	# emscripten's cpp does not emit usable #line directives for errno.h,
++	# so the musl header carrying the E* defines is read directly. $sysroot
++	# comes from config.sh, which hints/emscripten.sh derives from emcc.
++	my ($f) = grep { defined $_ and -f $_ }
++	    "$sysroot/include/bits/errno.h",
++	    "$sysroot/include/errno.h",
++	    ($ENV{EMSDK} ? "$ENV{EMSDK}/upstream/emscripten/cache/sysroot/include/bits/errno.h" : ()),
++	    ($ENV{EMSCRIPTEN} ? "$ENV{EMSCRIPTEN}/system/lib/libc/musl/arch/emscripten/bits/errno.h" : ());
++	die "cannot locate an emscripten errno.h" unless $f;
++	push(@file, $f);
      } elsif ($^O eq 'os390') {
  	# OS/390 C compiler doesn't generate #file or #line directives
          # and it does not tag the header as 1047 (EBCDIC), so make a local
-+    } elsif ($^O eq 'emscripten') {
-+	my $f = "$ENV{EMSCRIPTEN}/system/lib/libc/musl/arch/emscripten/bits/errno.h";
-+	die "didn't find $f" unless -f $f;
-+	$file{$f} = 1;
-         # copy and tag it
-         my $cp = `cp /usr/include/errno.h ./errno.h`;
-         my $chtag = `chtag -t -cIBM-1047 ./errno.h`;
