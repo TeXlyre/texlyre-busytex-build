@@ -50,6 +50,9 @@ jobs:
           emcc --version
           emar --version
 
+      - name: Restore exec bits
+        run: chmod +x biber/*.sh
+
       - name: Build biber wasm
         env:
           # emsdk's llvm-ar wrapper. The host ar produces archives the wasm

@@ -17,7 +17,7 @@ export AR=${AR:-llvm-ar}
 
 mkdir -p "$BUILD" "$DEPS_PREFIX"
 
-SRCDIR=$SRCDIR PERL_VERSION=$PERL_VERSION sh "$ROOT/fetch_sources.sh"
+SRCDIR=$SRCDIR PERL_VERSION=$PERL_VERSION bash "$ROOT/fetch_sources.sh"
 
 apply_patches() {
     cd "$PERL_SRC"
@@ -89,29 +89,29 @@ build_xs_modules() {
 
     SOMBOK_SRC=$SRCDIR/Unicode-LineBreak/sombok
     [ -d "$SOMBOK_SRC/lib" ] || SOMBOK_SRC=$SRCDIR/sombok
-    SOMBOK_SRC=$SOMBOK_SRC DEPS_PREFIX=$DEPS_PREFIX SRCDIR=$SRCDIR sh "$ROOT/build_deps.sh" sombok
-    SRCDIR=$SRCDIR DEPS_PREFIX=$DEPS_PREFIX sh "$ROOT/build_deps.sh" libxml2
+    SOMBOK_SRC=$SOMBOK_SRC DEPS_PREFIX=$DEPS_PREFIX SRCDIR=$SRCDIR bash "$ROOT/build_deps.sh" sombok
+    SRCDIR=$SRCDIR DEPS_PREFIX=$DEPS_PREFIX bash "$ROOT/build_deps.sh" libxml2
 
     grep -vE '^\s*(#|$)' "$ROOT/modules.txt" | while read -r mod ver extra; do
         dir=$SRCDIR/$(echo "$mod" | tr ':' '-')
         case "${extra:-}" in
             btparse)
-                SRCDIR=$SRCDIR DEPS_PREFIX=$DEPS_PREFIX sh "$ROOT/build_deps.sh" btparse "$dir"
-                MODVER=$ver "$ROOT/build_xs.sh" "$dir" "$mod" "-I$dir/btparse/src"
+                SRCDIR=$SRCDIR DEPS_PREFIX=$DEPS_PREFIX bash "$ROOT/build_deps.sh" btparse "$dir"
+                MODVER=$ver bash "$ROOT/build_xs.sh" "$dir" "$mod" "-I$dir/btparse/src"
                 $AR r "$PERL_WASM_LIB/auto/Text/BibTeX/BibTeX.a" "$dir"/btparse/src/*.o
                 ;;
             sombok)
-                MODVER=$ver "$ROOT/build_xs.sh" "$dir" "$mod" "-I$DEPS_PREFIX/sombok/include"
+                MODVER=$ver bash "$ROOT/build_xs.sh" "$dir" "$mod" "-I$DEPS_PREFIX/sombok/include"
                 merge_archive "$PERL_WASM_LIB/auto/Unicode/LineBreak/LineBreak.a" \
                               "$DEPS_PREFIX/sombok/lib/libsombok.a" sombok_
                 ;;
             libxml2)
-                MODVER=$ver "$ROOT/build_xs.sh" "$dir" "$mod" "-I$DEPS_PREFIX/libxml2/include/libxml2"
+                MODVER=$ver bash "$ROOT/build_xs.sh" "$dir" "$mod" "-I$DEPS_PREFIX/libxml2/include/libxml2"
                 merge_archive "$PERL_WASM_LIB/auto/XML/LibXML/LibXML.a" \
                               "$DEPS_PREFIX/libxml2/lib/libxml2.a" xml2_
                 ;;
             *)
-                MODVER=$ver "$ROOT/build_xs.sh" "$dir" "$mod" "${extra:-}"
+                MODVER=$ver bash "$ROOT/build_xs.sh" "$dir" "$mod" "${extra:-}"
                 ;;
         esac
     done

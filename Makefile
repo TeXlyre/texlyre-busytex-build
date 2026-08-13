@@ -643,7 +643,7 @@ wasm-xetex:
 
 .PHONY: wasm-biber
 wasm-biber:
-	PERL_VERSION=$(PERL_VERSION_BIBER) BIBER_VERSION=$(BIBER_VERSION) BUILD=$(ROOT)/build/wasm/biber biber/build_biber.sh
+	PERL_VERSION=$(PERL_VERSION_BIBER) BIBER_VERSION=$(BIBER_VERSION) BUILD=$(ROOT)/build/wasm/biber bash biber/build_biber.sh
 	cp build/wasm/biber/biber.js build/wasm/biber.js
 	-cp build/wasm/biber/biber.wasm build/wasm/biber.wasm
 
