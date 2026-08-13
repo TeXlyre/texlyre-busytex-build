@@ -93,7 +93,7 @@ build_xs_modules() {
     SRCDIR=$SRCDIR DEPS_PREFIX=$DEPS_PREFIX bash "$ROOT/build_deps.sh" libxml2
 
     grep -vE '^\s*(#|$)' "$ROOT/modules.txt" | while read -r mod ver extra; do
-        dir=$SRCDIR/$(echo "$mod" | tr ':' '-')
+        dir=$SRCDIR/$(echo "$mod" | sed 's/::/-/g')
         case "${extra:-}" in
             btparse)
                 SRCDIR=$SRCDIR DEPS_PREFIX=$DEPS_PREFIX bash "$ROOT/build_deps.sh" btparse "$dir"

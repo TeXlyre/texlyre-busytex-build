@@ -6,27 +6,44 @@
 # from apt-get source, which needs deb-src enabled and is unavailable on the
 # GitHub runner images by default.
 set -eu
+set -o pipefail
 
 ROOT=$(cd "$(dirname "$0")" && pwd)
 SRCDIR=${SRCDIR:?set SRCDIR}
 PERL_VERSION=${PERL_VERSION:-5.38.2}
 BIBER_VERSION=${BIBER_VERSION:-2.19}
 LIBXML2_VERSION=${LIBXML2_VERSION:-2.9.14}
-SOMBOK_VERSION=${SOMBOK_VERSION:-2.4.0}
+SOMBOK_REPO=${SOMBOK_REPO:-https://github.com/hatukanezumi/sombok.git}
 EMPERL_REPO=${EMPERL_REPO:-https://github.com/haukex/emperl5.git}
 EMPERL_BRANCH=${EMPERL_BRANCH:-emperl_v5.30.0}
 
 mkdir -p "$SRCDIR"
 
+# Module::Name -> Module-Name. tr ':' '-' would double every dash.
+dist_dir() {
+    echo "$1" | sed 's/::/-/g'
+}
+
+# curl -sL happily emits a 404 body, which then reaches tar as "not in gzip
+# format" with no indication of which download failed.
+fetch_tar() {
+    url=$1; dest=$2; flag=$3
+    mkdir -p "$dest"
+    if ! curl -fsSL "$url" | tar -x$flag -f - --strip-components=1 --directory="$dest"; then
+        echo "failed to fetch $url"
+        rm -rf "$dest"
+        return 1
+    fi
+}
+
 fetch_cpan() {
     module=$1; version=$2
-    dest="$SRCDIR/$(echo "$module" | tr ':' '-')"
+    dest="$SRCDIR/$(dist_dir "$module")"
     [ -d "$dest" ] && return 0
     url=$(curl -sL "https://fastapi.metacpan.org/v1/download_url/$module?version===$version" \
           | grep -o '"download_url"[^,]*' | cut -d'"' -f4)
     [ -n "$url" ] || { echo "cannot resolve $module $version on metacpan"; exit 1; }
-    mkdir -p "$dest"
-    curl -sL "$url" | tar -xzf - --strip-components=1 --directory="$dest"
+    fetch_tar "$url" "$dest" z
     echo "fetched $module $version"
 }
 
@@ -36,9 +53,7 @@ done
 
 # biber itself
 if [ ! -d "$SRCDIR/biber" ]; then
-    mkdir -p "$SRCDIR/biber"
-    curl -sL "https://codeload.github.com/plk/biber/tar.gz/refs/tags/v$BIBER_VERSION" \
-        | tar -xzf - --strip-components=1 --directory="$SRCDIR/biber"
+    fetch_tar "https://codeload.github.com/plk/biber/tar.gz/refs/tags/v$BIBER_VERSION" "$SRCDIR/biber" z
 fi
 
 # biber's pure-perl dependency tree, installed into the wasm prefix later
@@ -51,9 +66,7 @@ fi
 # patches/ applied, because emperl's newest branch is 5.30.0 and biber's
 # Build.PL requires 5.32.0.
 if [ ! -d "$SRCDIR/perl" ]; then
-    mkdir -p "$SRCDIR/perl"
-    curl -sL "https://www.cpan.org/src/5.0/perl-$PERL_VERSION.tar.gz" \
-        | tar -xzf - --strip-components=1 --directory="$SRCDIR/perl"
+    fetch_tar "https://www.cpan.org/src/5.0/perl-$PERL_VERSION.tar.gz" "$SRCDIR/perl" z
 fi
 
 # emperl supplies ext/WebPerl, nodeperl_dev_prerun.js and the nodeperl_dev
@@ -68,18 +81,22 @@ done
 
 # libxml2
 if [ ! -d "$SRCDIR/libxml2" ]; then
-    mkdir -p "$SRCDIR/libxml2"
     series=${LIBXML2_VERSION%.*}
-    curl -sL "https://download.gnome.org/sources/libxml2/$series/libxml2-$LIBXML2_VERSION.tar.xz" \
-        | tar -xJf - --strip-components=1 --directory="$SRCDIR/libxml2"
+    # The GNOME release tarball carries a generated configure; the GitHub mirror
+    # does not, so the fallback path runs autoreconf in build_deps.sh.
+    if ! fetch_tar "https://download.gnome.org/sources/libxml2/$series/libxml2-$LIBXML2_VERSION.tar.xz" "$SRCDIR/libxml2" J; then
+        fetch_tar "https://codeload.github.com/GNOME/libxml2/tar.gz/refs/tags/v$LIBXML2_VERSION" "$SRCDIR/libxml2" z
+    fi
 fi
 
-# sombok. The CPAN Unicode-LineBreak dist normally bundles it; the tarball is
-# only fetched when that bundled copy is absent.
+# sombok. The CPAN Unicode-LineBreak dist references a bundled copy but does not
+# ship one, so it is cloned from upstream. There is no 2.4.0 tag - the only tags
+# are the old sombok-2011.x REL1 series - and master carries VERSION 2.4.0, which
+# is what the XS expects. The tree is hand-configured in build_deps.sh, so the
+# missing autotools output does not matter.
 if [ ! -d "$SRCDIR/Unicode-LineBreak/sombok/lib" ] && [ ! -d "$SRCDIR/sombok" ]; then
-    mkdir -p "$SRCDIR/sombok"
-    curl -sL "https://github.com/hatukanezumi/sombok/releases/download/$SOMBOK_VERSION/sombok-$SOMBOK_VERSION.tar.gz" \
-        | tar -xzf - --strip-components=1 --directory="$SRCDIR/sombok"
+    git clone --depth 1 "$SOMBOK_REPO" "$SRCDIR/sombok"
+    test -f "$SRCDIR/sombok/include/sombok.h.in" || { echo "unexpected sombok layout"; exit 1; }
 fi
 
 echo "sources ready in $SRCDIR"

@@ -20,6 +20,7 @@ freeze_autotools() {
 
 build_libxml2() {
     cd "$SRCDIR"/libxml2
+    [ -x ./configure ] || autoreconf -fi
     freeze_autotools
     emconfigure ./configure \
         --disable-shared --enable-static \
