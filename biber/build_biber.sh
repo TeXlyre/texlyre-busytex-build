@@ -121,6 +121,18 @@ link_biber() {
     cd "$PERL_SRC"
     exts=$(grep -vE '^\s*(#|$)' "$ROOT/modules.txt" | awk '{gsub(/::/,"/",$1); printf "%s ", $1}')
     perl -i -pe "s{^static_ext='(.*)'\$}{static_ext='\$1 $exts'}" config.sh
+
+    kept=""
+    for e in $(perl -ne "print \$1 if /^static_ext='(.*)'/" config.sh); do
+        leaf=${e##*/}
+        if [ -f "lib/auto/$e/$leaf.a" ]; then
+            kept="$kept $e"
+        else
+            echo "skipping static ext $e: lib/auto/$e/$leaf.a not built"
+        fi
+    done
+    perl -i -pe "s{^static_ext='.*'\$}{static_ext='$kept'}" config.sh
+
     ./Configure -S
     rm -f perlmain.c perlmain.o nodeperl_dev.js
     make perl
