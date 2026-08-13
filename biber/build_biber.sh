@@ -69,18 +69,12 @@ build_wasm_perl() {
 # the CORE headers and libperl.a.
 install_perl_headers() {
     site=$PERL_WASM_PREFIX/lib/$PERL_VERSION
-    arch=$site/wasm
-
-    # Every .pm is served from the version-independent directory. A normal
-    # install also drops copies of the XS modules' .pm into the arch directory,
-    # where they take precedence in @INC; on a rebuilt tree those go stale and
-    # shadow the current ones, which surfaces as "object version X does not match
-    # bootstrap parameter Y". Only CORE survives here.
-    rm -rf "$arch"
-    mkdir -p "$arch/CORE"
+    rm -rf "$site"
+    mkdir -p "$site/wasm/CORE"
     cp -r lib/. "$site/"
-    cp ./*.h "$arch/CORE/"
-    cp libperl.a "$arch/CORE/"
+    cp ./*.h "$site/wasm/CORE/"
+    cp libperl.a "$site/wasm/CORE/"
+    chmod -R u+w "$site"
 }
 
 # XML::LibXML ships dom.c, xpath.c and friends whose object names collide with
@@ -225,7 +219,10 @@ install_biber_tree() {
 
     [ -d /usr/share/perl5 ] || { echo "no /usr/share/perl5; install the biber package first"; exit 1; }
     [ -f /usr/share/perl5/Biber.pm ] || { echo "biber package not installed on the host"; exit 1; }
+    rm -rf "$site"
+    mkdir -p "$site"
     cp -r /usr/share/perl5/. "$site/"
+    chmod -R u+w "$site"
 
     # Over the top of the distro copies: the .pm files from the same sources the
     # XS was built from, so the perl side and the linked bootstrap agree on
@@ -250,6 +247,7 @@ install_biber_tree() {
     # biber itself from the requested release, overriding whatever the distro
     # packaged, so BIBER_VERSION means what it says.
     cp -r "$SRCDIR/biber/lib/." "$site/"
+    chmod -R u+w "$site"
     install -D -m 755 "$SRCDIR/biber/bin/biber" "$PERL_WASM_PREFIX/bin/biber"
 }
 
