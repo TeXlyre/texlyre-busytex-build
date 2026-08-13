@@ -69,11 +69,18 @@ build_wasm_perl() {
 # the CORE headers and libperl.a.
 install_perl_headers() {
     site=$PERL_WASM_PREFIX/lib/$PERL_VERSION
-    core=$site/wasm/CORE
-    mkdir -p "$core"
+    arch=$site/wasm
+
+    # Every .pm is served from the version-independent directory. A normal
+    # install also drops copies of the XS modules' .pm into the arch directory,
+    # where they take precedence in @INC; on a rebuilt tree those go stale and
+    # shadow the current ones, which surfaces as "object version X does not match
+    # bootstrap parameter Y". Only CORE survives here.
+    rm -rf "$arch"
+    mkdir -p "$arch/CORE"
     cp -r lib/. "$site/"
-    cp ./*.h "$core/"
-    cp libperl.a "$core/"
+    cp ./*.h "$arch/CORE/"
+    cp libperl.a "$arch/CORE/"
 }
 
 # XML::LibXML ships dom.c, xpath.c and friends whose object names collide with
@@ -203,19 +210,30 @@ link_biber() {
 
 # The perl half of everything that goes in the preload filesystem.
 #
-# The XS modules' .pm files are copied from the same sources their XS was built
-# from, so the perl side and the linked bootstrap always agree on version. They
-# are staged first so cpanm sees them as satisfied and does not try to build
-# those distributions natively - XML::LibXML in particular needs libxml2 headers
-# on the host and would otherwise abort the whole --installdeps run.
+# biber's pure-perl dependency closure comes from the distro package rather than
+# from cpanm. Installing biber with apt pulls that whole closure into
+# /usr/share/perl5 already resolved and mutually consistent, needs no network at
+# build time, and cannot half-fail partway through the way an --installdeps run
+# can. It is also the arrangement this build was actually proven against.
+#
+# Only /usr/share/perl5 is copied: the arch directory holds compiled .so files
+# for the host, which are useless here and whose modules are supplied by the
+# statically linked XS instead.
 install_biber_tree() {
     site=$PERL_WASM_PREFIX/lib/site_perl/$PERL_VERSION
-    staging=$BUILD/cpanlib/lib/perl5
-    mkdir -p "$site" "$staging"
+    mkdir -p "$site"
 
+    [ -d /usr/share/perl5 ] || { echo "no /usr/share/perl5; install the biber package first"; exit 1; }
+    [ -f /usr/share/perl5/Biber.pm ] || { echo "biber package not installed on the host"; exit 1; }
+    cp -r /usr/share/perl5/. "$site/"
+
+    # Over the top of the distro copies: the .pm files from the same sources the
+    # XS was built from, so the perl side and the linked bootstrap agree on
+    # version. A mismatch here fails at runtime with "object version ... does not
+    # match bootstrap parameter".
     grep -vE '^\s*(#|$)' "$ROOT/modules.txt" | while read -r mod ver extra; do
         dir=$SRCDIR/$(echo "$mod" | sed 's/::/-/g')
-        [ -d "$dir/lib" ] && cp -r "$dir/lib/." "$staging/"
+        [ -d "$dir/lib" ] && cp -r "$dir/lib/." "$site/"
 
         # Not exclusive: Clone and Text::CSV_XS have only a top-level .pm named
         # after the last component of the module, and XML::LibXML has both, with
@@ -224,16 +242,13 @@ install_biber_tree() {
         if [ -f "$dir/$leaf.pm" ]; then
             sub=$(echo "${mod%::*}" | sed 's/::/\//g')
             [ "$sub" = "$mod" ] && sub=.
-            mkdir -p "$staging/$sub"
-            cp "$dir/$leaf.pm" "$staging/$sub/"
+            mkdir -p "$site/$sub"
+            cp "$dir/$leaf.pm" "$site/$sub/"
         fi
     done
 
-    command -v cpanm >/dev/null || { echo "cpanm not found"; exit 1; }
-    cpanm --notest --no-man-pages --local-lib-contained "$BUILD/cpanlib" \
-        --installdeps "$SRCDIR/biber"
-
-    cp -r "$staging/." "$site/"
+    # biber itself from the requested release, overriding whatever the distro
+    # packaged, so BIBER_VERSION means what it says.
     cp -r "$SRCDIR/biber/lib/." "$site/"
     install -D -m 755 "$SRCDIR/biber/bin/biber" "$PERL_WASM_PREFIX/bin/biber"
 }

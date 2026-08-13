@@ -38,8 +38,14 @@ jobs:
       - name: Install prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential curl xz-utils cpanminus autoconf automake libtool pkg-config libxml2-dev libexpat1-dev
+          sudo apt-get install -y build-essential curl xz-utils autoconf automake libtool pkg-config
+          # biber's pure-perl dependency closure, already resolved and mutually
+          # consistent, is taken from this package rather than fetched by cpanm.
+          sudo apt-get install -y biber
+          test -f /usr/share/perl5/Biber.pm
 
+      # v13 to match build-wasm.yml: v14 fails with repeated "socket hang up"
+      # on the Node 24 runners.
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v13
         with:
