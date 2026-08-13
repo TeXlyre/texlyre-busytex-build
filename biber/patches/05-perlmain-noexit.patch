@@ -1,79 +1,52 @@
 diff --git a/perlmain_noexit_patch b/perlmain_noexit_patch
 new file mode 100644
-index 00000000..c4e1c1fd
+index 00000000..4b3cca47
 --- /dev/null
 +++ b/perlmain_noexit_patch
-@@ -0,0 +1,138 @@
-+--- perlmain.c.orig	2018-07-15 12:10:27.207629711 +0200
-++++ perlmain.c	2018-07-15 12:11:23.051306602 +0200
-+@@ -58,23 +58,16 @@
-+ struct perl_vars* Perl_GetVarsPrivate(void) { return my_plvarsp; }
-+ #endif
+@@ -0,0 +1,81 @@
++--- perlmain.c.orig
+++++ perlmain.c
++@@ -54,6 +54,8 @@
++ static void xs_init (pTHX);
++ static PerlInterpreter *my_perl;
 + 
-++int emperl_end_perl();
+++int emperl_end_perl(void);
 ++
 + #ifdef NO_ENV_ARRAY_IN_MAIN
-+-extern char **environ;
-+-int
-+-main(int argc, char **argv)
-+-#else
-++#error "NO_ENV_ARRAY_IN_MAIN not supported in this configuration"
-++#endif
++ extern char **environ;
 + int
++@@ -63,7 +65,6 @@
 + main(int argc, char **argv, char **env)
-+-#endif
++ #endif
 + {
 +-    int exitstatus, i;
-+ #ifdef PERL_GLOBAL_STRUCT
-+-    struct perl_vars *my_vars = init_global_struct();
-+-#  ifdef PERL_GLOBAL_STRUCT_PRIVATE
-+-    int veto;
-+-
-+-    my_plvarsp = my_vars;
-+-#  endif
-++#error "PERL_GLOBAL_STRUCT not supported in this configuration"
-+ #endif /* PERL_GLOBAL_STRUCT */
 + #ifndef NO_ENV_ARRAY_IN_MAIN
 +     PERL_UNUSED_ARG(env);
-+@@ -87,25 +80,10 @@
-+     /* noop unless Configure is given -Accflags=-DPERL_GPROF_CONTROL */
-+     PERL_GPROF_MONCONTROL(0);
-+ 
-+-#ifdef NO_ENV_ARRAY_IN_MAIN
-+-    PERL_SYS_INIT3(&argc,&argv,&environ);
-+-#else
-+     PERL_SYS_INIT3(&argc,&argv,&env);
-+-#endif
-+ 
-+ #if defined(USE_ITHREADS)
-+-    /* XXX Ideally, this should really be happening in perl_alloc() or
-+-     * perl_construct() to keep libperl.a transparently fork()-safe.
-+-     * It is currently done here only because Apache/mod_perl have
-+-     * problems due to lack of a call to cancel pthread_atfork()
-+-     * handlers when shared objects that contain the handlers may
-+-     * be dlclose()d.  This forces applications that embed perl to
-+-     * call PTHREAD_ATFORK() explicitly, but if and only if it hasn't
-+-     * been called at least once before in the current process.
-+-     * --GSAR 2001-07-20 */
-+-    PTHREAD_ATFORK(Perl_atfork_lock,
-+-                   Perl_atfork_unlock,
-+-                   Perl_atfork_unlock);
-++#error "USE_ITHREADS not supported in this configuration"
 + #endif
-+ 
-+     PERL_SYS_FPU_INIT;
-+@@ -118,8 +96,33 @@
++@@ -103,7 +104,9 @@
 + 	PL_perl_destruct_level = 0;
 +     }
 +     PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
-+-    if (!perl_parse(my_perl, xs_init, argc, argv, (char **)NULL))
-+-        perl_run(my_perl);
++-    if (!perl_parse(my_perl, xs_init, argc, argv, (char **)NULL)) {
 ++    if (perl_parse(my_perl, xs_init, argc, argv, (char **)NULL))
 ++        return emperl_end_perl();
+++    {
++ 
++         /* perl_parse() may end up starting its own run loops, which
++          * might end up "leaking" PL_restartop from the parse phase into
++@@ -123,9 +126,35 @@
++          * risking breakage to XS code under DEBUGGING. - Yves
++          */
++         assert(!PL_restartop);
+++    }
++ 
++-        perl_run(my_perl);
 ++    if (perl_run(my_perl))
 ++        return emperl_end_perl();
 ++
-++    /* Code copied from perl_destruct in perl.c */
+++    /* Code copied from perl_destruct in perl.c: flush without tearing the
+++     * interpreter down, so the Emscripten runtime survives to call
+++     * emperl_end_perl through ccall. */
 ++#ifdef USE_PERLIO
 ++    {
 ++        PerlIO *stdo = PerlIO_stdout();
@@ -85,57 +58,27 @@ index 00000000..c4e1c1fd
 ++            if (!STATUS_UNIX)
 ++                STATUS_ALL_FAILURE;
 ++        }
-++    }
++     }
 ++#endif
 ++    my_fflush_all();
 ++    return STATUS_EXIT;
 ++}
 ++
 ++int
-++emperl_end_perl()
+++emperl_end_perl(void)
 ++{
 ++    int exitstatus, i;
 + 
 + #ifndef PERL_MICRO
 +     /* Unregister our signal handler before destroying my_perl */
-+@@ -134,36 +137,15 @@
++@@ -142,7 +171,12 @@
 + 
-+     perl_free(my_perl);
-+ 
-+-#if defined(USE_ENVIRON_ARRAY) && defined(PERL_TRACK_MEMPOOL) && !defined(NO_ENV_ARRAY_IN_MAIN)
-+-    /*
-+-     * The old environment may have been freed by perl_free()
-+-     * when PERL_TRACK_MEMPOOL is defined, but without having
-+-     * been restored by perl_destruct() before (this is only
-+-     * done if destruct_level > 0).
-+-     *
-+-     * It is important to have a valid environment for atexit()
-+-     * routines that are eventually called.
-+-     */
-+-    environ = env;
-+-#endif
-+-
 +     PERL_SYS_TERM();
 + 
-+-#ifdef PERL_GLOBAL_STRUCT
-+-#  ifdef PERL_GLOBAL_STRUCT_PRIVATE
-+-    veto = my_plvarsp->Gveto_cleanup;
-+-#  endif
-+-    free_global_struct(my_vars);
-+-#  ifdef PERL_GLOBAL_STRUCT_PRIVATE
-+-    if (!veto)
-+-        my_plvarsp = NULL;
-+-    /* Remember, functions registered with atexit() can run after this point,
-+-       and may access "global" variables, and hence end up calling
-+-       Perl_GetVarsPrivate()  */
-+-#endif
-+-#endif /* PERL_GLOBAL_STRUCT */
-+-
 +-    exit(exitstatus);
-++    /* When NO_EXIT_RUNTIME is set, Emscripten throws an ExitStatus exception when
-++     * exit() is called, so we only call it when there is a nonzero exit status.
-++     * As far as I can tell, Perl doesn't require exit() to be called (for example,
-++     * END blocks are apparently handled above, and not via atexit). */
+++    /* With EXIT_RUNTIME set, Emscripten throws ExitStatus from exit(), so it is
+++     * only called when the status is nonzero. Perl does not require exit() to
+++     * be reached: END blocks run in perl_destruct above, not via atexit. */
 ++    if (exitstatus)
 ++        exit(exitstatus);
 ++    return exitstatus;
