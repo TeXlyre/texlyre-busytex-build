@@ -71,6 +71,12 @@ compiles it with emcc against the target `CORE` headers, and archives it to
 - **`Configure -S` regenerates `Makefile` from `Makefile.SH`**, so the link-rule
   change is a patch against the `.SH`.
 - **`perlmain.c` is not regenerated when `static_ext` changes** — remove it.
+- **Install paths come from Configure, never from string assembly.** perl uses
+  `$prefix/lib/$version` when the prefix path contains "perl" and
+  `$prefix/lib/perl5/$version` otherwise, so a hardcoded layout is right or
+  wrong depending on what the build directory happens to be called.
+- **Perl's build tree ships .pm files mode 444**, so an install that copies over
+  an existing tree fails with EACCES. Invisible when the build runs as root.
 - **Version stamps matter.** `-DVERSION`/`-DXS_VERSION` must match the `.pm` or
   the bootstrap fails with `object version 0 does not match bootstrap parameter`.
 - **Two symbol collisions.** `PerlIO::utf8_strict` defines

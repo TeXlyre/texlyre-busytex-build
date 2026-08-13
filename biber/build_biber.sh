@@ -20,6 +20,10 @@ mkdir -p "$BUILD" "$DEPS_PREFIX"
 
 SRCDIR=$SRCDIR PERL_VERSION=$PERL_VERSION bash "$ROOT/fetch_sources.sh"
 
+config_var() {
+    sed -n "s/^$1='\(.*\)'$/\1/p" "$PERL_SRC/config.sh"
+}
+
 apply_patches() {
     cd "$PERL_SRC"
     [ -f .patched ] && return 0
@@ -68,12 +72,14 @@ build_wasm_perl() {
 # the host, so the pieces build_xs.sh needs are copied directly: the module tree,
 # the CORE headers and libperl.a.
 install_perl_headers() {
-    site=$PERL_WASM_PREFIX/lib/$PERL_VERSION
+    site=$(config_var privlib)
+    arch=$(config_var archlib)
+
     rm -rf "$site"
-    mkdir -p "$site/wasm/CORE"
+    mkdir -p "$arch/CORE"
     cp -r lib/. "$site/"
-    cp ./*.h "$site/wasm/CORE/"
-    cp libperl.a "$site/wasm/CORE/"
+    cp ./*.h "$arch/CORE/"
+    cp libperl.a "$arch/CORE/"
     chmod -R u+w "$site"
 }
 
@@ -93,8 +99,7 @@ merge_archive() {
 }
 
 build_xs_modules() {
-    export PERL_WASM_PREFIX
-    export PERL_WASM_VERSION=$PERL_VERSION
+    export PERL_WASM_CORE=$(config_var archlib)/CORE
     export PERL_WASM_LIB=$PERL_SRC/lib
     # miniperl from the cross build, so xsubpp matches the target perl exactly.
     # It needs -I: its own @INC is just '.', which is why Config.pm is missing.
@@ -214,7 +219,7 @@ link_biber() {
 # for the host, which are useless here and whose modules are supplied by the
 # statically linked XS instead.
 install_biber_tree() {
-    site=$PERL_WASM_PREFIX/lib/site_perl/$PERL_VERSION
+    site=$(config_var sitelib)
     mkdir -p "$site"
 
     [ -d /usr/share/perl5 ] || { echo "no /usr/share/perl5; install the biber package first"; exit 1; }
@@ -260,5 +265,5 @@ install_biber_tree
 
 cp "$PERL_SRC/nodeperl_dev.js" "$BUILD/biber.js"
 [ -f "$PERL_SRC/nodeperl_dev.wasm" ] && cp "$PERL_SRC/nodeperl_dev.wasm" "$BUILD/biber.wasm"
-cp -r "$PERL_WASM_PREFIX" "$BUILD/prefix" 2>/dev/null || true
+[ "$PERL_WASM_PREFIX" = "$BUILD/prefix" ] || cp -r "$PERL_WASM_PREFIX" "$BUILD/prefix"
 echo "biber wasm module in $BUILD"
