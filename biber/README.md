@@ -25,7 +25,7 @@ make wasm-biber
 
 The `biber` package supplies the pure-perl dependency closure, already resolved, from `/usr/share/perl5`.
 
-Output is `build/wasm/biber.js` and `build/wasm/biber.wasm`, copied into `dist-wasm/` by `make dist-wasm`.
+Output is `build/wasm/biber.js`, `build/wasm/biber.wasm` and `build/wasm/biber.data`, copied into `dist-wasm/` by `make dist-wasm`. The interpreter bakes its prefix into `@INC`, so it is configured against `/opt/perl-wasm` and the perl tree is preloaded into the module at that path; the directory must exist and be writable on the build host.
 
 CI builds it as its own job, `.github/workflows/build-biber-wasm.yml`, and publishes a release. `build-wasm.yml` takes an optional `biberwasmreleasetag` input and downloads that artifact rather than rebuilding it; left empty, the bundle ships without biber.
 

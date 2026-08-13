@@ -144,7 +144,6 @@ Luaotfload rescanning is disabled, and `TEXMFCACHE` is pinned to the generated t
 * mf-nowin
 * LuaMetaTeX / LMTX (lua)
 * tlmgr (perl)
-* Biber (perl)
 * mktexlsr, fmtutil, updmap (perl)
 
 ---

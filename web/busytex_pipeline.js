@@ -198,7 +198,7 @@ class BusytexPipeline {
         return promise;
     }
 
-    constructor(busytex_js, busytex_wasm, data_packages_js, preload_data_packages_js, texmf_local, print, on_initialized, preload, script_loader) {
+    constructor(busytex_js, busytex_wasm, data_packages_js, preload_data_packages_js, texmf_local, print, on_initialized, preload, script_loader, biber_js = null, biber_wasm = null, biber_data = null) {
         this.print = text => { console.log(text); print(text); };
         this.preload = preload;
         this.script_loader = script_loader;
@@ -226,6 +226,7 @@ class BusytexPipeline {
                 luatex: [],
                 luahbtex: [],
                 bibtex8: [],
+                biber: ['--quiet'],
                 xdvipdfmx: [],
             },
             [BusytexPipeline.VerboseInfo]: {
@@ -235,6 +236,7 @@ class BusytexPipeline {
                 luahbtex: ['-kpathsea-debug', '32'],
                 xdvipdfmx: ['--kpathsea-debug', '32', '-v'],
                 bibtex8: ['--debug', 'search'],
+                biber: [],
             },
             [BusytexPipeline.VerboseDebug]: {
                 pdftex: ['-kpathsea-debug', '63', '-recorder'],
@@ -243,10 +245,11 @@ class BusytexPipeline {
                 luahbtex: ['-kpathsea-debug', '63', '-recorder', '--debug-format'],
                 xdvipdfmx: ['--kpathsea-debug', '63', '-vv'],
                 bibtex8: ['--debug', 'all'],
+                biber: ['--debug'],
             },
         };
         this.supported_drivers = ['xetex_bibtex8_dvipdfmx', 'pdftex_bibtex8', 'luahbtex_bibtex8', 'luatex_bibtex8'];
-        this.biber = null;
+        this.biber = biber_js && biber_wasm && biber_data && typeof BusytexBiber != 'undefined' ? new BusytexBiber(biber_js, biber_wasm, biber_data, this.print, this.script_loader) : null;
 
         this.error_messages_fatal = ['Fatal error occurred', 'That was a fatal error', ':fatal:', '! Undefined control sequence.', 'undefined old font command'];
         this.error_messages_all = this.error_messages_fatal.concat(['no output PDF file produced', 'No pages of output.']);
@@ -534,7 +537,7 @@ class BusytexPipeline {
         Module.kpse_remote_register_misses(keys);
     }
 
-    async compile(files, main_tex_path, bibtex, makeindex = null, rerun = null, verbose, driver, data_packages_js = [], remote_endpoint = '', shell_escape = false, biber = null) {
+    async compile(files, main_tex_path, bibtex, biber = null, makeindex = null, rerun = null, verbose, driver, data_packages_js = [], remote_endpoint = '', shell_escape = false) {
         if (!this.supported_drivers.includes(driver))
             throw new Error(`Driver [${driver}] is not supported, only [${this.supported_drivers}] are supported`);
         this.print(`New compilation started: [${main_tex_path}]`);
@@ -641,7 +644,7 @@ class BusytexPipeline {
 
         if (exit_code == 0 && bibtex) {
             if (bib_backend == 'biber' && this.biber != null)
-                exit_code = await this._run_biber(FS, tex_path, files, verbose_args_for('bibtex8'));
+                exit_code = await this._run_biber(FS, tex_path, files, verbose_args_for('biber'));
             else
                 ({ exit_code } = run(bibtex8_cmd, this.error_messages_fatal));
 

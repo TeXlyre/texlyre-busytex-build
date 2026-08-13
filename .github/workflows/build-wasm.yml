@@ -101,7 +101,14 @@ jobs:
 
       - name: Download biber wasm
         if: ${{ github.event.inputs.biberwasmreleasetag != '' }}
-        run: make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.biberwasmreleasetag }} download-biber-wasm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.privaterepo }}" = "true" ]; then
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.biberwasmreleasetag }} download-biber-wasm-auth
+          else
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.biberwasmreleasetag }} download-biber-wasm
+          fi
 
       - name: Create packages and dist
         run: |
@@ -120,9 +127,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          biber_assets=""
+          if [ -f build/wasm/biber.js ]; then
+            biber_assets="web/busytex_biber.js build/wasm/biber.js build/wasm/biber.wasm build/wasm/biber.data"
+          fi
           chown $(whoami) -R . && gh --version && gh release create \
             build_wasm_${{github.sha}}_${{ github.run_id }}_${{ github.run_attempt }} \
             -t "Wasm assets" \
+            $biber_assets \
             web/busytex_pipeline.js \
             web/busytex_worker.js \
             build/versions.txt \

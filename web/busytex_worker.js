@@ -1,13 +1,14 @@
+importScripts('busytex_biber.js');
 importScripts('busytex_pipeline.js');
 
 self.pipeline = null;
 
-onmessage = async ({ data: { files, main_tex_path, bibtex, makeindex, rerun, busytex_wasm, busytex_js, preload_data_packages_js, data_packages_js, texmf_local, preload, verbose, driver, remote_endpoint, shell_escape, load_shell_handler_script, read_project_files, write_texlive_remote_files, write_texlive_remote_misses } }) => {
+onmessage = async ({ data: { files, main_tex_path, bibtex, biber, makeindex, rerun, busytex_wasm, busytex_js, biber_js, biber_wasm, biber_data, preload_data_packages_js, data_packages_js, texmf_local, preload, verbose, driver, remote_endpoint, shell_escape, load_shell_handler_script, read_project_files, write_texlive_remote_files, write_texlive_remote_misses } }) => {
     // TODO: cache data packages from here? https://developer.mozilla.org/en-US/docs/Web/API/Cache
 
     if (busytex_wasm && busytex_js && preload_data_packages_js) {
         try {
-            self.pipeline = new BusytexPipeline(busytex_js, busytex_wasm, data_packages_js, preload_data_packages_js, texmf_local, msg => postMessage({ print: msg }), applet_versions => postMessage({ initialized: applet_versions }), preload, BusytexPipeline.ScriptLoaderWorker);
+            self.pipeline = new BusytexPipeline(busytex_js, busytex_wasm, data_packages_js, preload_data_packages_js, texmf_local, msg => postMessage({ print: msg }), applet_versions => postMessage({ initialized: applet_versions }), preload, BusytexPipeline.ScriptLoaderWorker, biber_js, biber_wasm, biber_data);
         }
         catch (err) {
             postMessage({ exception: 'Exception during initialization: ' + err.toString() + '\nStack:\n' + err.stack });
@@ -52,7 +53,7 @@ onmessage = async ({ data: { files, main_tex_path, bibtex, makeindex, rerun, bus
     }
     else if (files && self.pipeline) {
         try {
-            postMessage(await self.pipeline.compile(files, main_tex_path, bibtex, makeindex, rerun, verbose, driver, data_packages_js, remote_endpoint, shell_escape === true))
+            postMessage(await self.pipeline.compile(files, main_tex_path, bibtex, biber, makeindex, rerun, verbose, driver, data_packages_js, remote_endpoint, shell_escape === true))
         }
         catch (err) {
             postMessage({ exception: 'Exception during compilation: ' + err.toString() + '\nStack:\n' + err.stack });

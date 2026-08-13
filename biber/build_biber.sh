@@ -10,7 +10,8 @@ DEPS_PREFIX=$BUILD/deps
 PERL_SRC=$SRCDIR/perl
 HOST_PERL_BUILD=$BUILD/hostperl
 PERL_VERSION=${PERL_VERSION:-5.38.2}
-PERL_WASM_PREFIX=${PERL_WASM_PREFIX:-$BUILD/prefix}
+PERL_WASM_PREFIX=${PERL_WASM_PREFIX:-/opt/perl-wasm}
+STAGE=$BUILD/prefix-stage
 export AR=${AR:-llvm-ar}
 
 mkdir -p "$BUILD" "$DEPS_PREFIX"
@@ -42,6 +43,7 @@ build_wasm_perl() {
     mkdir -p "$BUILD/shim"
     cp "$ROOT/emcc_configure_shim.sh" "$BUILD/shim/emcc"
     chmod +x "$BUILD/shim/emcc"
+    ORIG_PATH=$PATH
     export PATH=$BUILD/shim:$PATH
 
     export EMPERL_HOSTPERLDIR=$HOST_PERL_BUILD
@@ -51,8 +53,9 @@ build_wasm_perl() {
     sh Configure -des -Dhintfile=emscripten
     sh "$ROOT/config_fixups.sh" config.sh
     ./Configure -S
+    export PATH=$ORIG_PATH
 
-    make perl
+    make perl EMPERL_OUTPUT=nodeperl_dev.js EMPERL_LINK_FLAGS=
     install_perl_headers
 }
 
@@ -167,8 +170,27 @@ link_biber() {
     ./Configure -S
     rm -f perlmain.c perlmain.o nodeperl_dev.js
     dedupe_static_ext
-    make perl
+    make perl EMPERL_OUTPUT=nodeperl_dev.js EMPERL_LINK_FLAGS=
     install_perl_headers
+}
+
+# The interpreter resolves @INC against the prefix baked in at Configure time,
+# so the staged copy is mounted at that same path rather than a virtual one.
+stage_prefix() {
+    rm -rf "$STAGE"
+    mkdir -p "$STAGE"
+    cp -r "$PERL_WASM_PREFIX/." "$STAGE/"
+    find "$STAGE" -type d -name CORE -prune -exec rm -rf {} +
+    find "$STAGE" -type d -name pod -prune -exec rm -rf {} +
+    find "$STAGE" \( -name '*.a' -o -name '*.h' -o -name '*.pod' \) -delete
+}
+
+link_browser() {
+    cd "$PERL_SRC"
+    rm -f perl biber.js biber.wasm biber.data
+    make perl EMPERL_OUTPUT=biber.js EMPERL_LINK_FLAGS="-sMODULARIZE=1 -sEXPORT_NAME=biber \
+        -sENVIRONMENT=web,worker,node -sFORCE_FILESYSTEM=1 \
+        --pre-js $ROOT/browser_prerun.js --preload-file $STAGE@$PERL_WASM_PREFIX"
 }
 
 install_biber_tree() {
@@ -205,8 +227,8 @@ build_wasm_perl
 build_xs_modules
 link_biber
 install_biber_tree
+stage_prefix
+link_browser
 
-cp "$PERL_SRC/nodeperl_dev.js" "$BUILD/biber.js"
-[ -f "$PERL_SRC/nodeperl_dev.wasm" ] && cp "$PERL_SRC/nodeperl_dev.wasm" "$BUILD/biber.wasm"
-[ "$PERL_WASM_PREFIX" = "$BUILD/prefix" ] || cp -r "$PERL_WASM_PREFIX" "$BUILD/prefix"
+cp "$PERL_SRC/biber.js" "$PERL_SRC/biber.wasm" "$PERL_SRC/biber.data" "$BUILD/"
 echo "biber wasm module in $BUILD"

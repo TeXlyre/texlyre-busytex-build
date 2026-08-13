@@ -31,6 +31,8 @@ PERL_VERSION_BIBER  := 5.38.2
 EMPERL_REPO         := https://github.com/haukex/emperl5.git
 EMPERL_BRANCH       := emperl_v5.30.0
 BIBER_VERSION       := 2.19
+BIBER_PREFIX        := /opt/perl-wasm
+BIBER_ASSETS        := biber.js biber.wasm biber.data
 EMROOT              := $(dir $(shell which emcc))
 
 BUSYTEX_native       = $(abspath build/native/busytex)
@@ -643,15 +645,19 @@ wasm-xetex:
 
 .PHONY: wasm-biber
 wasm-biber:
-	PERL_VERSION=$(PERL_VERSION_BIBER) BIBER_VERSION=$(BIBER_VERSION) BUILD=$(ROOT)/build/wasm/biber bash biber/build_biber.sh
-	cp build/wasm/biber/biber.js build/wasm/biber.js
-	-cp build/wasm/biber/biber.wasm build/wasm/biber.wasm
+	mkdir -p $(BIBER_PREFIX)
+	PERL_VERSION=$(PERL_VERSION_BIBER) BIBER_VERSION=$(BIBER_VERSION) PERL_WASM_PREFIX=$(BIBER_PREFIX) BUILD=$(ROOT)/build/wasm/biber bash biber/build_biber.sh
+	cp $(addprefix build/wasm/biber/,$(BIBER_ASSETS)) build/wasm/
 
-.PHONY: download-biber-wasm
+.PHONY: download-biber-wasm download-biber-wasm-auth
 download-biber-wasm:
 	mkdir -p build/wasm
-	wget -P build/wasm -nc $(addprefix $(URLRELEASE)/,biber.js)
-	-wget -P build/wasm -nc $(addprefix $(URLRELEASE)/,biber.wasm)
+	wget -P build/wasm -nc $(addprefix $(URLRELEASE)/,$(BIBER_ASSETS))
+
+download-biber-wasm-auth:
+	mkdir -p build/wasm
+	gh release download $(notdir $(URLRELEASE)) --repo $(GITHUB_REPOSITORY) --dir build/wasm --clobber \
+	  $(foreach asset,$(BIBER_ASSETS),--pattern "$(asset)")
 
 .PHONY: wasm-all
 wasm-all: wasm wasm-pdftex wasm-xetex
@@ -742,7 +748,7 @@ dist-wasm:
 	    build/wasm/texlive-recommended.js.providespackage.txt \
 	    build/wasm/texlive-extra.js.providespackage.txt $@
 	-cp web/busytex_pipeline.js web/busytex_worker.js web/busytex_biber.js $@
-	-cp build/wasm/biber.js build/wasm/biber.wasm $@
+	-cp $(addprefix build/wasm/,$(BIBER_ASSETS)) $@
 
 dist-native-full: build/native/busytex
 	mkdir -p $@

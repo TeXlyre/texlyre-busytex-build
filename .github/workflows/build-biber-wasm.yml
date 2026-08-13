@@ -41,6 +41,10 @@ jobs:
           sudo apt-get install -y build-essential curl xz-utils autoconf automake libtool pkg-config
           # Supplies biber's pure-perl dependency closure in /usr/share/perl5.
           sudo apt-get install -y biber
+          # The interpreter bakes its prefix into @INC, so it is built at the
+          # same path the packaged tree is mounted at.
+          sudo mkdir -p /opt/perl-wasm
+          sudo chown "$(id -u):$(id -g)" /opt/perl-wasm
           
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v13
@@ -62,6 +66,24 @@ jobs:
       - name: Smoke test
         run: |
           cd build/wasm/biber
+          cat > smoke.js <<'JS'
+          const biber = require('./biber.js');
+          const run = async () => {
+              for (const argv of [['-e', 'use XML::LibXML; use Text::BibTeX; use Unicode::GCString; print "xs ok\n"'],
+                                  ['/opt/perl-wasm/bin/biber', '--version'],
+                                  ['/opt/perl-wasm/bin/biber', '--tool', '--output-format=bibtex', '--nolog', 'smoke.bib']]) {
+                  const Module = await biber({ noInitialRun: true });
+                  if (argv[0] !== '-e')
+                      Module.FS.writeFile('/home/web_user/biber/smoke.bib', require('fs').readFileSync('smoke.bib', 'utf8'));
+                  const exit_code = Module.callMain(argv);
+                  if (exit_code) throw new Error(argv.join(' ') + ' exited ' + exit_code);
+                  if (argv.includes('--tool') && !Module.FS.analyzePath('/home/web_user/biber/smoke_bibertool.bib').exists)
+                      throw new Error('biber produced no output');
+              }
+              console.log('biber produced output');
+          };
+          run().catch(err => { console.error(err); process.exit(1); });
+          JS
           cat > smoke.bib <<'BIB'
           @article{knuth1984,
             author  = {Knuth, Donald E.},
@@ -70,19 +92,12 @@ jobs:
             year    = {1984},
           }
           BIB
-          EMPERL_PREFIX=$PWD/prefix EMPERL_OUTPUTDIR=/ \
-            node biber.js -e 'use XML::LibXML; use Text::BibTeX; use Unicode::GCString; print "xs ok\n"'
-          EMPERL_PREFIX=$PWD/prefix EMPERL_OUTPUTDIR=/ \
-            node biber.js prefix/bin/biber --version
-          EMPERL_PREFIX=$PWD/prefix EMPERL_OUTPUTDIR=/ \
-            node biber.js prefix/bin/biber --tool --output-format=bibtex --nolog smoke.bib
-          test -s smoke_bibertool.bib && echo "biber produced output"
+          node smoke.js
 
       - name: Package
         run: |
           mkdir -p dist-biber
-          cp build/wasm/biber/biber.js web/busytex_biber.js dist-biber/
-          cp build/wasm/biber/biber.wasm dist-biber/ || true
+          cp build/wasm/biber/biber.js build/wasm/biber/biber.wasm build/wasm/biber/biber.data web/busytex_biber.js dist-biber/
           tar -czf biber-wasm.tar.gz -C dist-biber .
 
       - uses: actions/upload-artifact@v4
@@ -91,6 +106,7 @@ jobs:
           path: |
             build/wasm/biber/biber.js
             build/wasm/biber/biber.wasm
+            build/wasm/biber/biber.data
             web/busytex_biber.js
 
       - name: Release
@@ -99,4 +115,8 @@ jobs:
         run: |
           tag=build_biber_wasm_${GITHUB_SHA}_${GITHUB_RUN_ID}_${GITHUB_RUN_NUMBER}
           gh release create "$tag" --title "$tag" --notes "biber $BIBER_VERSION on perl $PERL_VERSION, wasm" \
-            build/wasm/biber/biber.js biber-wasm.tar.gz
+            build/wasm/biber/biber.js \
+            build/wasm/biber/biber.wasm \
+            build/wasm/biber/biber.data \
+            web/busytex_biber.js \
+            biber-wasm.tar.gz

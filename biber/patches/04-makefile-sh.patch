@@ -43,12 +43,12 @@ index 160f21dd..203a4ded 100755
 +	# Note: need $(EMPERL_LINK_FLAGS) here so the compiler doesn't remove functions like ccall
 +	# and we need NO_EXIT_RUNTIME=0 because otherwise Emscripten won't flush streams on exit etc.
 +	emscripten) $spitshell >>$Makefile <<'!NO!SUBS!'
-+	$(SHRPENV) $(CC) -o nodeperl_dev.js $(CLDFLAGS) $(CCDLFLAGS) $(perlmain_objs) $(static_ext) $(LLIBPERL) `cat ext.libs` $(libs) \
++	$(SHRPENV) $(CC) -o $(EMPERL_OUTPUT) $(CLDFLAGS) $(CCDLFLAGS) $(perlmain_objs) $(static_ext) $(LLIBPERL) `cat ext.libs` $(libs) \
 +		-sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 \
 +		-sEXPORTED_FUNCTIONS="['_main','_emperl_end_perl','_Perl_eval_pv','_Perl_call_argv']" \
 +		-sEXPORTED_RUNTIME_METHODS="['ccall','cwrap','FS','callMain']" \
-+		-lnodefs.js --pre-js nodeperl_dev_prerun.js
-+	$(LNS) -f nodeperl_dev.js $(PERL_EXE)
++		$(EMPERL_LINK_FLAGS)
++	$(LNS) -f $(EMPERL_OUTPUT) $(PERL_EXE)
 +	touch $(PERL_EXE)
 +!NO!SUBS!
 +	;;

@@ -131,7 +131,7 @@ async function run() {
 
             await pipeline.on_initialized_promise;
 
-            const result = await pipeline.compile(files, main, false, false, false, BusytexPipeline.VerboseSilent, driver, [], remote || '');
+            const result = await pipeline.compile(files, main, false, null, false, false, BusytexPipeline.VerboseSilent, driver, [], remote || '');
 
             console.log   = _consoleLog;
             console.error = _consoleError;
