@@ -543,9 +543,8 @@ class BusytexPipeline {
             bibtex = this.bibtex_resolver.resolve(files);
 
         const bib_backend = biber === null ? this.bibtex_resolver.resolve_backend(files) : (biber ? 'biber' : 'bibtex8');
-        if (bib_backend == 'biber' && this.biber == null) {
+        if (bib_backend == 'biber' && this.biber == null)
             this.print('biber backend requested but no biber module was configured, falling back to bibtex8');
-        }
 
         const resolved = await this.data_package_resolver.resolve(files, main_tex_path, data_packages_js);
         const filter_map = (f, return_tex_package = true) => Object.entries(resolved).filter(([tex_package, v]) => f(v)).map(([tex_package, v]) => return_tex_package ? tex_package : v.source);

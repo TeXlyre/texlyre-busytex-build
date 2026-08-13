@@ -1,0 +1,40 @@
+diff --git a/ext/re/re_top.h b/ext/re/re_top.h
+index 543f9249..f2557dbe 100644
+--- a/ext/re/re_top.h
++++ b/ext/re/re_top.h
+@@ -28,9 +28,35 @@
+ #define Perl_reg_named_buff_firstkey my_reg_named_buff_firstkey
+ #define Perl_reg_named_buff_nextkey  my_reg_named_buff_nextkey 
+ #define Perl_reg_named_buff_scalar   my_reg_named_buff_scalar  
++
++/* 5.36 split regcomp.c into regcomp{,_debug,_invlist,_study,_trie}.c and added
++ * these without extending the rename list above. ext/re compiles its own copies
++ * of those files, so each ends up defined in both re.a and libperl.a. GNU ld
++ * tolerates it; wasm-ld rejects it as a duplicate symbol. */
++#define Perl_reg_add_data                       my_reg_add_data
++#define Perl_populate_anyof_bitmap_from_invlist my_populate_anyof_bitmap_from_invlist
++#define Perl_add_above_Latin1_folds             my_add_above_Latin1_folds
++#define Perl_set_ANYOF_arg                      my_set_ANYOF_arg
++#define Perl_get_ANYOFM_contents                my_get_ANYOFM_contents
++#define Perl_get_ANYOFHbbm_contents             my_get_ANYOFHbbm_contents
++#define Perl_populate_bitmap_from_invlist       my_populate_bitmap_from_invlist
++#define Perl_populate_invlist_from_bitmap       my_populate_invlist_from_bitmap
+ #define Perl_reg_named_buff_all      my_reg_named_buff_all     
+ #define Perl_reg_qr_package        my_reg_qr_package
+ 
++/* Exported by regcomp.c and regcomp_invlist.c but absent from the list above,
++ * which predates the 5.38 regcomp split. Harmless when re is a shared object,
++ * since its private copies simply shadow the core ones, but a fully static perl
++ * links both and wasm-ld rejects the duplicate definitions. */
++#define Perl_reg_add_data                      my_reg_add_data
++#define Perl_populate_anyof_bitmap_from_invlist my_populate_anyof_bitmap_from_invlist
++#define Perl_add_above_Latin1_folds            my_add_above_Latin1_folds
++#define Perl_set_ANYOF_arg                     my_set_ANYOF_arg
++#define Perl_get_ANYOFM_contents               my_get_ANYOFM_contents
++#define Perl_get_ANYOFHbbm_contents            my_get_ANYOFHbbm_contents
++#define Perl_populate_bitmap_from_invlist      my_populate_bitmap_from_invlist
++#define Perl_populate_invlist_from_bitmap      my_populate_invlist_from_bitmap
++
+ #define PERL_NO_GET_CONTEXT
+ 
+ /*

@@ -38,22 +38,25 @@ jobs:
       - name: Install prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential curl xz-utils cpanminus
-
-      - uses: mymindstorm/setup-emsdk@v14
+          sudo apt-get install -y build-essential curl xz-utils autoconf automake libtool pkg-config
+          # Supplies biber's pure-perl dependency closure in /usr/share/perl5.
+          sudo apt-get install -y biber
+          
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v13
         with:
-          version: ${{ env.EMSCRIPTEN_VERSION }}
+          version: ${{env.EMSCRIPTEN_VERSION}}
 
       - name: Check toolchain
         run: |
           emcc --version
-          llvm-ar --version || echo "llvm-ar comes from the emsdk clang; see AR below"
+          emar --version
 
       - name: Build biber wasm
         env:
-          # emsdk ships its own llvm-ar; using the host one produces archives the
-          # wasm linker rejects.
-          AR: ${{ env.EMSDK }}/upstream/bin/llvm-ar
+          # The host ar produces archives the wasm linker rejects, and llvm-ar
+          # is not on PATH after emsdk activation.
+          AR: emar
         run: make wasm-biber
 
       - name: Smoke test
@@ -78,9 +81,8 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist-biber
-          cp build/wasm/biber/biber.js dist-biber/
-          cp build/wasm/biber/biber.wasm dist-biber/ 2>/dev/null || true
-          cp web/busytex_biber.js dist-biber/
+          cp build/wasm/biber/biber.js web/busytex_biber.js dist-biber/
+          cp build/wasm/biber/biber.wasm dist-biber/ || true
           tar -czf biber-wasm.tar.gz -C dist-biber .
 
       - uses: actions/upload-artifact@v4

@@ -1,9 +1,9 @@
 diff --git a/hints/emscripten.sh b/hints/emscripten.sh
 new file mode 100644
-index 00000000..97ba1ec4
+index 00000000..9ff0aa22
 --- /dev/null
 +++ b/hints/emscripten.sh
-@@ -0,0 +1,178 @@
+@@ -0,0 +1,179 @@
 +
 +# ##### WebPerl - http://webperl.zero-g.net #####
 +# 
@@ -156,12 +156,13 @@ index 00000000..97ba1ec4
 +# from Makefile.emcc / Makefile.micro
 +ccflags="$ccflags -DSTANDARD_C -DPERL_USE_SAFE_PUTENV -DNO_MATHOMS"
 +
-+ldflags="$ldflags $EMPERL_OPTIMIZ -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=1 -Wno-almost-asm"
++ldflags="$ldflags $EMPERL_OPTIMIZ -sALLOW_MEMORY_GROWTH=1"
 +# Note: these can be ignored: "WARNING:root:not all asm.js optimizations are possible with ALLOW_MEMORY_GROWTH, disabling those. [-Walmost-asm]"
 +# hence the switch to disable the warning above (we're not building for asm.js, just WebAssembly)
 +
 +# we need WASM because Perl does a lot of unaligned memory access, and that is only supported by WASM, not asm.js.
-+ldflags="$ldflags -s WASM=1 -s BINARYEN_METHOD=native-wasm"
++# WASM=1 is the default and BINARYEN_METHOD was removed after emscripten 1.38;
++# passing either is an error on modern emcc.
 +#TODO Later: figure out "-s BINARYEN_METHOD='native-wasm,interpret-binary'"
 +# when I tried it, I got this warning during compilation:
 +# "BINARYEN_ASYNC_COMPILATION disabled due to user options. This will reduce performance and compatibility (some browsers limit synchronous compilation), see https://github.com/kripken/emscripten/wiki/WebAssembly#codegen-effects"

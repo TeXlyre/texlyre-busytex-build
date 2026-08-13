@@ -12,6 +12,8 @@ To run the package server, refer to the [TeX Live server instructions](/texlive-
 * bibtex8, xdvipdfmx, makeindex
 * kpsewhich, kpsestat, kpseaccess, kpsereadlink
 
+biber is included as a separate module, built and loaded on demand. See the [biber build instructions](/biber/README.md).
+
 **Supported targets:** `x86_64-linux` (static, musl) and `wasm32`.
 
 ---
@@ -101,6 +103,8 @@ make wasm-postbuild-hyphenation-fmt
 make smoke-wasm
 make dist-native dist-wasm
 ```
+
+To include biber, run `make wasm-biber` before `dist-wasm`, or fetch a published build with `make URLRELEASE=<release-url> download-biber-wasm`. See [biber/README.md](/biber/README.md).
 
 ### Clean
 

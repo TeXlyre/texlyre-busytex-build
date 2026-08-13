@@ -1,18 +1,11 @@
 #!/bin/bash
-# Builds the three external C libraries biber's XS dependencies link against.
-# Every other CPAN XS module in the set is self-contained.
-#
-#   libxml2  -> XML::LibXML
-#   sombok   -> Unicode::LineBreak (Unicode::GCString)
-#   btparse  -> Text::BibTeX  (bundled in the dist, built by build_biber.sh)
+# The three external C libraries biber's XS dependencies link against. Every
+# other CPAN XS module in the set is self-contained.
 set -eu
 SRCDIR=${SRCDIR:?set SRCDIR}
 DEPS_PREFIX=${DEPS_PREFIX:?set DEPS_PREFIX}
 AR=${AR:-llvm-ar}
 
-# Debian's autotools-generated trees carry timestamps that make GNU make try to
-# regenerate Makefile.in via automake, which is not installed. Touching every
-# generated file in dependency order stops the rebuild rule from firing.
 freeze_autotools() {
     touch aclocal.m4 configure config.h.in 2>/dev/null || true
     find . -name 'Makefile.in' -exec touch {} +
@@ -20,6 +13,7 @@ freeze_autotools() {
 
 build_libxml2() {
     cd "$SRCDIR"/libxml2
+    [ -x ./configure ] || autoreconf -fi
     freeze_autotools
     emconfigure ./configure \
         --disable-shared --enable-static \
@@ -31,9 +25,6 @@ build_libxml2() {
     emmake make install
 }
 
-# sombok's Debian source ships a zero-length configure, so the header template
-# is substituted by hand and the library compiled directly. unichar_t is an
-# unsigned int on wasm32; libthai is omitted (Thai line breaking only).
 build_sombok() {
     cd "${SOMBOK_SRC:-$SRCDIR/sombok}"
     sed -e 's/@PACKAGE_VERSION@/2.4.0/' \
@@ -51,9 +42,6 @@ build_sombok() {
     cp include/sombok.h include/sombok_constants.h "$DEPS_PREFIX/sombok/include/"
 }
 
-# btparse expects config.h as well as bt_config.h, and HAVE_STRLCAT must be
-# defined: emscripten's libc provides strlcat, and btparse's own static fallback
-# collides with it when the macro is left undefined.
 build_btparse() {
     cd "$1"/btparse/src
     sed -e 's/#\[% ALLOCA_H %\]/#define HAVE_ALLOCA_H 1/' \
