@@ -13,6 +13,7 @@ PERL_SRC=$SRCDIR/perl
 HOST_PERL_BUILD=$BUILD/hostperl
 PERL_VERSION=${PERL_VERSION:-5.38.2}
 PERL_WASM_PREFIX=${PERL_WASM_PREFIX:-$BUILD/prefix}
+export PERL_WASM_PREFIX PERL_VERSION
 export AR=${AR:-llvm-ar}
 
 mkdir -p "$BUILD" "$DEPS_PREFIX"
@@ -55,9 +56,24 @@ build_wasm_perl() {
     sh "$ROOT/config_fixups.sh" config.sh
     ./Configure -S
 
-    # Serial only: the generate_uudmap rule races with itself under -j.
-    make
-    make install
+    # 'make perl' rather than 'make': the default target continues into the
+    # utilities, which run ../perl - a JS file with no shebang or exec bit - and
+    # nothing in biber needs corelist, perldoc or the rest. Serial only, the
+    # generate_uudmap rule races with itself under -j.
+    make perl
+    install_perl_headers
+}
+
+# make install runs installperl with the target perl, which is not executable on
+# the host, so the pieces build_xs.sh needs are copied directly: the module tree,
+# the CORE headers and libperl.a.
+install_perl_headers() {
+    site=$PERL_WASM_PREFIX/lib/$PERL_VERSION
+    core=$site/wasm/CORE
+    mkdir -p "$core"
+    cp -r lib/. "$site/"
+    cp ./*.h "$core/"
+    cp libperl.a "$core/"
 }
 
 # XML::LibXML ships dom.c, xpath.c and friends whose object names collide with
@@ -117,6 +133,13 @@ build_xs_modules() {
     done
 }
 
+# Safety net for the same class of problem patches/07 fixes by hand: an
+# extension that keeps a private copy of a core translation unit (ext/re does
+# this with regcomp.c) only avoids a clash because dynamic loading lets its
+# copy shadow the core one. Statically linked, wasm-ld rejects the duplicate
+# definitions. Any symbol defined in both libperl.a and an extension archive is
+# renamed inside the extension, which also rewrites that archive's own
+# references to it.
 dedupe_static_ext() {
     objcopy=$(dirname "$(command -v emcc)")/../bin/llvm-objcopy
     [ -x "$objcopy" ] || objcopy=$(command -v llvm-objcopy || true)
@@ -166,6 +189,7 @@ link_biber() {
     rm -f perlmain.c perlmain.o nodeperl_dev.js
     dedupe_static_ext
     make perl
+    install_perl_headers
 }
 
 # biber's pure-perl dependency tree. cpanm installs into the wasm prefix with
@@ -188,4 +212,5 @@ install_biber_tree
 
 cp "$PERL_SRC/nodeperl_dev.js" "$BUILD/biber.js"
 [ -f "$PERL_SRC/nodeperl_dev.wasm" ] && cp "$PERL_SRC/nodeperl_dev.wasm" "$BUILD/biber.wasm"
+cp -r "$PERL_WASM_PREFIX" "$BUILD/prefix" 2>/dev/null || true
 echo "biber wasm module in $BUILD"
