@@ -125,31 +125,6 @@ build_xs_modules() {
     done
 }
 
-dedupe_static_ext() {
-    objcopy=$(dirname "$(command -v emcc)")/../bin/llvm-objcopy
-    [ -x "$objcopy" ] || objcopy=$(command -v llvm-objcopy || true)
-    [ -x "$objcopy" ] || return 0
-    nm_tool=$(dirname "$objcopy")/llvm-nm
-    [ -x "$nm_tool" ] || return 0
-
-    core=$(mktemp)
-    "$nm_tool" --defined-only --extern-only libperl.a 2>/dev/null | awk '{print $NF}' | sort -u > "$core"
-
-    for a in $(sed -n "s/^static_ext='\(.*\)'$/\1/p" config.sh); do
-        archive=lib/auto/$a/${a##*/}.a
-        [ -f "$archive" ] || continue
-        dups=$("$nm_tool" --defined-only --extern-only "$archive" 2>/dev/null | awk '{print $NF}' | sort -u | comm -12 - "$core")
-        [ -n "$dups" ] || continue
-        args=""
-        for d in $dups; do
-            args="$args --redefine-sym $d=perlext_$d"
-        done
-        echo "renaming duplicate symbols in $archive"
-        "$objcopy" $args "$archive"
-    done
-    rm -f "$core"
-}
-
 link_biber() {
     cd "$PERL_SRC"
     exts=$(grep -vE '^\s*(#|$)' "$ROOT/modules.txt" | awk '{gsub(/::/,"/",$1); printf "%s ", $1}')
@@ -169,7 +144,6 @@ link_biber() {
 
     ./Configure -S
     rm -f perlmain.c perlmain.o nodeperl_dev.js
-    dedupe_static_ext
     make perl EMPERL_OUTPUT=nodeperl_dev.js EMPERL_LINK_FLAGS=
     install_perl_headers
 }
