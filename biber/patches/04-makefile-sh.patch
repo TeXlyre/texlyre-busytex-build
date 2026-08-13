@@ -1,5 +1,5 @@
 diff --git a/Makefile.SH b/Makefile.SH
-index 160f21dd..508b9e1d 100755
+index 160f21dd..203a4ded 100755
 --- a/Makefile.SH
 +++ b/Makefile.SH
 @@ -670,7 +670,7 @@ lintflags = \
@@ -48,7 +48,7 @@ index 160f21dd..508b9e1d 100755
 +		-sEXPORTED_FUNCTIONS="['_main','_emperl_end_perl','_Perl_eval_pv','_Perl_call_argv']" \
 +		-sEXPORTED_RUNTIME_METHODS="['ccall','cwrap','FS','callMain']" \
 +		-lnodefs.js --pre-js nodeperl_dev_prerun.js
-+	$(LNS) -f nodeperl_dev $(PERL_EXE)
++	$(LNS) -f nodeperl_dev.js $(PERL_EXE)
 +	touch $(PERL_EXE)
 +!NO!SUBS!
 +	;;

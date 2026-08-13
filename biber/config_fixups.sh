@@ -36,3 +36,9 @@ set_var longdblnanbytes "0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
 # builds no archive and the link fails on a missing NamedCapture.a. The static
 # extension list in hints/emscripten.sh predates that change.
 sed -i -E "s|Tie/Hash/NamedCapture ||" "$CONFIG_SH"
+
+# Emscripten has no stack protector: __stack_chk_guard is undefined at link even
+# for a trivial program. Configure adds -fstack-protector-strong by default and
+# hints/emscripten.sh repeats it in its hardcoded cppflags, so it is stripped
+# from every flag variable at once.
+sed -i "s/ -fstack-protector-strong//g" "$CONFIG_SH"

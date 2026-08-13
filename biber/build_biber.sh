@@ -117,11 +117,40 @@ build_xs_modules() {
     done
 }
 
+dedupe_static_ext() {
+    objcopy=$(dirname "$(command -v emcc)")/../bin/llvm-objcopy
+    [ -x "$objcopy" ] || objcopy=$(command -v llvm-objcopy || true)
+    [ -x "$objcopy" ] || { echo "no llvm-objcopy, skipping duplicate symbol check"; return 0; }
+
+    core=$(mktemp)
+    $AR t libperl.a >/dev/null 2>&1 || return 0
+    "$objcopy" --version >/dev/null 2>&1 || return 0
+    nm_tool=$(dirname "$objcopy")/llvm-nm
+    "$nm_tool" --defined-only --extern-only libperl.a 2>/dev/null | awk '{print $NF}' | sort -u > "$core"
+
+    for a in $(perl -ne "print \$1 if /^static_ext='(.*)'/" config.sh); do
+        leaf=${a##*/}
+        archive=lib/auto/$a/$leaf.a
+        [ -f "$archive" ] || continue
+        dups=$("$nm_tool" --defined-only --extern-only "$archive" 2>/dev/null | awk '{print $NF}' | sort -u | comm -12 - "$core")
+        [ -n "$dups" ] || continue
+        echo "renaming $(echo "$dups" | wc -l) duplicate symbol(s) in $archive"
+        args=""
+        for d in $dups; do
+            args="$args --redefine-sym $d=perlext_$d"
+        done
+        "$objcopy" $args "$archive"
+    done
+    rm -f "$core"
+}
+
 link_biber() {
     cd "$PERL_SRC"
     exts=$(grep -vE '^\s*(#|$)' "$ROOT/modules.txt" | awk '{gsub(/::/,"/",$1); printf "%s ", $1}')
     perl -i -pe "s{^static_ext='(.*)'\$}{static_ext='\$1 $exts'}" config.sh
 
+    # Drop any extension whose archive was not produced, so a perl version that
+    # moves an extension to pure perl degrades instead of failing the link.
     kept=""
     for e in $(perl -ne "print \$1 if /^static_ext='(.*)'/" config.sh); do
         leaf=${e##*/}
@@ -135,6 +164,7 @@ link_biber() {
 
     ./Configure -S
     rm -f perlmain.c perlmain.o nodeperl_dev.js
+    dedupe_static_ext
     make perl
 }
 
