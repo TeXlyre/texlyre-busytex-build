@@ -154,16 +154,19 @@ stage_prefix() {
     rm -rf "$STAGE"
     mkdir -p "$STAGE"
     cp -r "$PERL_WASM_PREFIX/." "$STAGE/"
-    find "$STAGE" -type d -name CORE -prune -exec rm -rf {} +
-    find "$STAGE" -type d -name pod -prune -exec rm -rf {} +
-    find "$STAGE" \( -name '*.a' -o -name '*.h' -o -name '*.pod' \) -delete
+    find "$STAGE" -type d \( -name CORE -o -name pod -o -name t -o -name CPAN -o -name CPANPLUS -o -name TAP \) -prune -exec rm -rf {} +
+    find "$STAGE" \( -name '*.a' -o -name '*.h' -o -name '*.pod' -o -name '*.t' -o -name '.packlist' -o -name 'CPAN.pm' -o -name 'CPANPLUS.pm' \) -delete
+    # mktables inputs, consumed at build time; Unicode::UCD is the only runtime
+    # reader of this directory and it opens just these two files and version.
+    find "$STAGE" -path '*/unicore/*' -name '*.txt' ! -name 'Blocks.txt' ! -name 'SpecialCasing.txt' -delete
+    find "$STAGE" -path '*/unicore/*' \( -name 'mktables' -o -name 'mktables.lst' -o -name 'TestNorm.pl' -o -name 'TestProp.pl' \) -delete
 }
 
 link_browser() {
     cd "$PERL_SRC"
     rm -f perl biber.js biber.wasm biber.data
-    make perl EMPERL_OUTPUT=biber.js EMPERL_LINK_FLAGS="-sMODULARIZE=1 -sEXPORT_NAME=biber \
-        -sENVIRONMENT=web,worker,node -sFORCE_FILESYSTEM=1 \
+    make perl EMPERL_OUTPUT=biber.js EMPERL_LINK_FLAGS="-sMODULARIZE=1 -sEXPORT_NAME=biber -sLZ4=1 \
+        -sENVIRONMENT=web,worker,node --use-preload-cache \
         --pre-js $ROOT/browser_prerun.js --preload-file $STAGE@$PERL_WASM_PREFIX"
 }
 

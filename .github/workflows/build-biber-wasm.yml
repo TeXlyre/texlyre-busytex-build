@@ -66,24 +66,6 @@ jobs:
       - name: Smoke test
         run: |
           cd build/wasm/biber
-          cat > smoke.js <<'JS'
-          const biber = require('./biber.js');
-          const run = async () => {
-              for (const argv of [['-e', 'use XML::LibXML; use Text::BibTeX; use Unicode::GCString; print "xs ok\n"'],
-                                  ['/opt/perl-wasm/bin/biber', '--version'],
-                                  ['/opt/perl-wasm/bin/biber', '--tool', '--output-format=bibtex', '--nolog', 'smoke.bib']]) {
-                  const Module = await biber({ noInitialRun: true });
-                  if (argv[0] !== '-e')
-                      Module.FS.writeFile('/home/web_user/biber/smoke.bib', require('fs').readFileSync('smoke.bib', 'utf8'));
-                  const exit_code = Module.callMain(argv);
-                  if (exit_code) throw new Error(argv.join(' ') + ' exited ' + exit_code);
-                  if (argv.includes('--tool') && !Module.FS.analyzePath('/home/web_user/biber/smoke_bibertool.bib').exists)
-                      throw new Error('biber produced no output');
-              }
-              console.log('biber produced output');
-          };
-          run().catch(err => { console.error(err); process.exit(1); });
-          JS
           cat > smoke.bib <<'BIB'
           @article{knuth1984,
             author  = {Knuth, Donald E.},
@@ -92,7 +74,23 @@ jobs:
             year    = {1984},
           }
           BIB
-          node smoke.js
+          node -e '
+            const fs = require("fs");
+            const biber = require("./biber.js");
+            const run = async () => {
+                const xs = await biber({ noInitialRun: true });
+                if (xs.callMain(["-e", "use XML::LibXML; use Text::BibTeX; use Unicode::GCString; print qq(xs ok\n)"]))
+                    throw new Error("xs check failed");
+                const tool = await biber({ noInitialRun: true });
+                tool.FS.writeFile("/home/web_user/biber/smoke.bib", fs.readFileSync("smoke.bib", "utf8"));
+                if (tool.callMain(["/opt/perl-wasm/bin/biber", "--tool", "--output-format=bibtex", "--nolog", "smoke.bib"]))
+                    throw new Error("biber --tool failed");
+                if (!tool.FS.analyzePath("/home/web_user/biber/smoke_bibertool.bib").exists)
+                    throw new Error("biber produced no output");
+                console.log("biber produced output");
+            };
+            run().catch(err => { console.error(err); process.exit(1); });
+          '
 
       - name: Package
         run: |

@@ -11,37 +11,33 @@ class BusytexBiber {
         this.script_loader = script_loader;
         this.work_dir = '/home/web_user/biber';
         this.bin_biber = '/opt/perl-wasm/bin/biber';
-        this.script_promise = null;
-        this.wasm_module_promise = null;
-        this.data_promise = null;
+        this.assets_promise = null;
     }
 
     _assets() {
-        if (this.script_promise == null) {
-            this.script_promise = this.script_loader(this.biber_js);
-            this.wasm_module_promise = fetch(this.biber_wasm).then(response => {
-                if (!response.ok) throw new Error(`Failed to fetch WASM module: ${this.biber_wasm} (HTTP ${response.status})`);
-                return response.arrayBuffer().then(WebAssembly.compile);
-            });
-            this.data_promise = fetch(this.biber_data).then(response => {
-                if (!response.ok) throw new Error(`Failed to fetch data package: ${this.biber_data} (HTTP ${response.status})`);
-                return response.arrayBuffer();
-            });
+        if (this.assets_promise == null) {
+            this.assets_promise = Promise.all([
+                this.script_loader(this.biber_js),
+                fetch(this.biber_wasm).then(response => {
+                    if (!response.ok) throw new Error(`Failed to fetch WASM module: ${this.biber_wasm} (HTTP ${response.status})`);
+                    return response.arrayBuffer().then(WebAssembly.compile);
+                }),
+            ]);
         }
-        return Promise.all([this.script_promise, this.wasm_module_promise, this.data_promise]);
+        return this.assets_promise;
     }
 
     // perl tears down its interpreter on exit, so every run gets a fresh
-    // instance; the compiled wasm and the data package are reused.
+    // instance; the compiled wasm is reused and the data package comes from the
+    // preload cache emscripten maintains.
     async instantiate() {
-        const [, wasm_module, data] = await this._assets();
+        const [, wasm_module] = await this._assets();
 
         const Module = {
             noInitialRun: true,
             locateFile: path => path.endsWith('.wasm') ? this.biber_wasm : path.endsWith('.data') ? this.biber_data : path,
-            getPreloadedPackage: () => data,
             instantiateWasm(imports, successCallback) {
-                WebAssembly.instantiate(wasm_module, imports).then(output => successCallback(output)).catch(err => { throw new Error('Error while initializing biber!\n\n' + err.toString()) });
+                WebAssembly.instantiate(wasm_module, imports).then(successCallback).catch(err => { throw new Error('Error while initializing biber!\n\n' + err.toString()) });
                 return {};
             },
             print: text => this.print(text),
@@ -57,13 +53,14 @@ class BusytexBiber {
     // written into one directory. Returns the .bbl text, or null on failure.
     async run(bcf_path, files, verbose_args = []) {
         const Module = await this.instantiate();
-        const { FS, PATH } = Module;
+        const FS = Module.FS;
+        const basename = p => p.slice(p.lastIndexOf('/') + 1);
 
         FS.chdir(this.work_dir);
         for (const { path, contents } of files)
-            FS.writeFile(PATH.join(this.work_dir, PATH.basename(path)), contents);
+            FS.writeFile(this.work_dir + '/' + basename(path), contents);
 
-        const bcf = PATH.basename(bcf_path);
+        const bcf = basename(bcf_path);
         const bbl = bcf.replace(/\.bcf$/, '.bbl');
         const argv = [this.bin_biber, '--output-format=bbl', `--outfile=${bbl}`, '--nolog', ...verbose_args, bcf];
 
@@ -79,7 +76,7 @@ class BusytexBiber {
         if (exit_code != 0)
             return null;
 
-        const bbl_full = PATH.join(this.work_dir, bbl);
+        const bbl_full = this.work_dir + '/' + bbl;
         return FS.analyzePath(bbl_full).exists ? FS.readFile(bbl_full, { encoding: 'utf8' }) : null;
     }
 }
