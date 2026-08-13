@@ -20,6 +20,8 @@ for sym in setproctitle setruid setrgid fdclose malloc_size malloc_good_size; do
     sed -i -E "s/^d_${sym}='define'/d_${sym}='undef'/" "$CONFIG_SH"
 done
 
+sed -i -E "s/^d_sigaction='undef'/d_sigaction='define'/" "$CONFIG_SH"
+
 set_var() {
     sed -i -E "s|^$1='.*'$|$1='$2'|" "$CONFIG_SH"
 }
