@@ -197,7 +197,7 @@ install_biber_tree() {
     install -D -m 755 "$SRCDIR/biber/bin/biber" "$PERL_WASM_PREFIX/bin/biber"
 }
 
-SRCDIR=$SRCDIR PERL_VERSION=$PERL_VERSION BIBER_VERSION=${BIBER_VERSION:-2.19} bash "$ROOT/fetch_sources.sh"
+SRCDIR=$SRCDIR PERL_VERSION=$PERL_VERSION BIBER_VERSION=${BIBER_VERSION:-2.22} bash "$ROOT/fetch_sources.sh"
 apply_patches
 build_host_perl
 build_wasm_perl

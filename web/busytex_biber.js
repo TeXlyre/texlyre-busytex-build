@@ -12,6 +12,7 @@ class BusytexBiber {
         this.work_dir = '/home/web_user/biber';
         this.bin_biber = '/opt/perl-wasm/bin/biber';
         this.assets_promise = null;
+        this.last_output = '';
     }
 
     _assets() {
@@ -40,8 +41,8 @@ class BusytexBiber {
                 WebAssembly.instantiate(wasm_module, imports).then(successCallback).catch(err => { throw new Error('Error while initializing biber!\n\n' + err.toString()) });
                 return {};
             },
-            print: text => this.print(text),
-            printErr: text => this.print(text),
+            print: text => { this.last_output += text + '\n'; this.print(text); },
+            printErr: text => { this.last_output += text + '\n'; this.print(text); },
         };
 
         const moduleFactory = typeof biber !== 'undefined' ? biber : self.biber;
@@ -52,6 +53,7 @@ class BusytexBiber {
     // Data sources are resolved relative to the control file, so everything is
     // written into one directory. Returns the .bbl text, or null on failure.
     async run(bcf_path, files, verbose_args = []) {
+        this.last_output = '';
         const Module = await this.instantiate();
         const FS = Module.FS;
         const basename = p => p.slice(p.lastIndexOf('/') + 1);
@@ -64,7 +66,9 @@ class BusytexBiber {
         const bbl = bcf.replace(/\.bcf$/, '.bbl');
         const argv = [this.bin_biber, '--output-format=bbl', `--outfile=${bbl}`, '--nolog', ...verbose_args, bcf];
 
-        this.print('$ biber ' + argv.slice(1).join(' '));
+        const cmdline = '$ biber ' + argv.slice(1).join(' ');
+        this.last_output += cmdline + '\n';
+        this.print(cmdline);
 
         let exit_code = 0;
         try {

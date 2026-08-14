@@ -5,7 +5,7 @@ set -o pipefail
 ROOT=$(cd "$(dirname "$0")" && pwd)
 SRCDIR=${SRCDIR:?set SRCDIR}
 PERL_VERSION=${PERL_VERSION:-5.38.2}
-BIBER_VERSION=${BIBER_VERSION:-2.19}
+BIBER_VERSION=${BIBER_VERSION:-2.22}
 LIBXML2_VERSION=${LIBXML2_VERSION:-2.9.14}
 SOMBOK_REPO=${SOMBOK_REPO:-https://github.com/hatukanezumi/sombok.git}
 EMPERL_REPO=${EMPERL_REPO:-https://github.com/haukex/emperl5.git}

@@ -226,7 +226,7 @@ class BusytexPipeline {
                 luatex: [],
                 luahbtex: [],
                 bibtex8: [],
-                biber: ['--quiet'],
+                biber: [],
                 xdvipdfmx: [],
             },
             [BusytexPipeline.VerboseInfo]: {
@@ -442,7 +442,7 @@ class BusytexPipeline {
         return this.rerun_patterns.some(p => log_text.includes(p));
     }
 
-    async _run_biber(FS, tex_path, files, verbose_args) {
+    async _run_biber(FS, tex_path, files, verbose_args, logs) {
         const bcf_path = tex_path.replace('.tex', '.bcf');
         const bbl_path = tex_path.replace('.tex', '.bbl');
 
@@ -458,11 +458,13 @@ class BusytexPipeline {
         }
 
         const bbl = await this.biber.run(bcf_path, inputs, verbose_args);
-        if (bbl == null)
-            return 1;
+        const exit_code = bbl == null ? 1 : 0;
 
-        FS.writeFile(bbl_path, bbl);
-        return 0;
+        if (bbl != null)
+            FS.writeFile(bbl_path, bbl);
+
+        logs.push({ cmd: `biber ${bcf_path}`, texmflog: '', missfontlog: '', log: this.biber.last_output, aux: bbl || '', stdout: this.biber.last_output, stderr: '', exit_code });
+        return exit_code;
     }
 
     _run_cmd(Module, FS, cmd, error_messages, verbose, log_path, blg_path, aux_path, bbl_path, mem_header, logs) {
@@ -546,6 +548,8 @@ class BusytexPipeline {
             bibtex = this.bibtex_resolver.resolve(files);
 
         const bib_backend = biber === null ? this.bibtex_resolver.resolve_backend(files) : (biber ? 'biber' : 'bibtex8');
+        if (biber === true)
+            bibtex = true;
         if (bib_backend == 'biber' && this.biber == null)
             this.print('biber backend requested but no biber module was configured, falling back to bibtex8');
 
@@ -644,7 +648,7 @@ class BusytexPipeline {
 
         if (exit_code == 0 && bibtex) {
             if (bib_backend == 'biber' && this.biber != null)
-                exit_code = await this._run_biber(FS, tex_path, files, verbose_args_for('biber'));
+                exit_code = await this._run_biber(FS, tex_path, files, verbose_args_for('biber'), logs);
             else
                 ({ exit_code } = run(bibtex8_cmd, this.error_messages_fatal));
 

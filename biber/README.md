@@ -4,7 +4,7 @@ biber compiled into a standalone WebAssembly module: a perl interpreter with eve
 
 It is not linked into `busytex`. It cannot share the web2c multiplexer's `main()`, it is roughly 8 MB, and almost no compilation needs it.
 
-**Bundled:** perl 5.38.2 (patched for emscripten), biber 2.19, 20 CPAN XS modules, libxml2, sombok, btparse.
+**Bundled:** perl 5.38.2 (patched for emscripten), biber 2.22, 20 CPAN XS modules, libxml2, sombok, btparse.
 
 ---
 

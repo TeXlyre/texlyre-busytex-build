@@ -15,7 +15,7 @@ on:
       biberversion:
         description: 'biber release tag (without the v)'
         required: true
-        default: '2.19'
+        default: '2.22'
 
 env:
   EMSCRIPTEN_VERSION: 5.0.4
