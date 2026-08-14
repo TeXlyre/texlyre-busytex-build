@@ -106,7 +106,7 @@ Blablabla said Nobody ~\cite{Nobody06}.
                     worker = new Worker(paths.busytex_worker_js);
             } else if (reload) {
                 worker = {
-                    async postMessage({ files, main_tex_path, bibtex, makeindex, rerun, preload, verbose, busytex_js, busytex_wasm, texmf_local, preload_data_packages_js, data_packages_js, driver }) {
+                    async postMessage({ files, main_tex_path, bibtex, biber, makeindex, rerun, preload, verbose, busytex_js, busytex_wasm, texmf_local, preload_data_packages_js, data_packages_js, driver }) {
                         if (busytex_wasm && busytex_js && preload_data_packages_js) {
                             this._init = { busytex_js, busytex_wasm, data_packages_js, preload_data_packages_js, texmf_local, preload };
                         } else if (files && this._init) {
@@ -122,7 +122,7 @@ Blablabla said Nobody ~\cite{Nobody06}.
                                 }).then(_ => new BusytexPipeline(busytex_js, busytex_wasm, init_data_packages_js, preload_data_packages_js, texmf_local, msg => w.onmessage({ data: { log: msg } }), () => { }, preload, BusytexPipeline.ScriptLoaderDocument));
                             }
                             const pipeline = await this.pipeline;
-                            const result = await pipeline.compile(files, main_tex_path, bibtex, makeindex, rerun, verbose, driver, data_packages_js);
+                            const result = await pipeline.compile(files, main_tex_path, bibtex, biber, makeindex, rerun, verbose, driver, data_packages_js);
                             w.onmessage({ data: result });
                         }
                     },

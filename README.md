@@ -12,6 +12,8 @@ To run the package server, refer to the [TeX Live server instructions](/texlive-
 * bibtex8, xdvipdfmx, makeindex
 * kpsewhich, kpsestat, kpseaccess, kpsereadlink
 
+biber is included as a separate module, built and loaded on demand. See the [biber build instructions](/biber/README.md).
+
 **Supported targets:** `x86_64-linux` (static, musl) and `wasm32`.
 
 ---
@@ -102,6 +104,8 @@ make smoke-wasm
 make dist-native dist-wasm
 ```
 
+To include biber, run `make wasm-biber` before `dist-wasm`, or fetch a published build with `make URLRELEASE=<release-url> download-biber-wasm`. See [biber/README.md](/biber/README.md).
+
 ### Clean
 
 ```shell
@@ -124,6 +128,15 @@ make build/wasm/busytex.js
 
 Then run the production server following the [server instructions](./texlive-server/README.md) from within the `texlive-server` directory.
 
+### Remote fonts
+
+The full TeX Live build creates `busytex-fontindex.txt` and places it in the **served `texmf-dist` on the remote server**. XeTeX fetches this index when a font is not available locally, finds the matching face, then downloads only that font file through remote `kpse`.
+
+Two other files are built from the full tree and published as release assets: `pdftex.map` and `luaotfload-names.lua.gz`. However, unlike the font index, these are **installed into every wasm data package** by `make install-font-assets`, allowing pdfTeX/xdvipdfmx and LuaHBTeX to resolve remote fonts.
+
+Luaotfload rescanning is disabled, and `TEXMFCACHE` is pinned to the generated tree so its prebuilt database remains available. `scripts/check_font_assets.sh` validates all three assets, and `make smoke-wasm` tests remote font lookup end-to-end.
+
+
 ---
 
 ## Roadmap
@@ -131,7 +144,6 @@ Then run the production server following the [server instructions](./texlive-ser
 * mf-nowin
 * LuaMetaTeX / LMTX (lua)
 * tlmgr (perl)
-* Biber (perl)
 * mktexlsr, fmtutil, updmap (perl)
 
 ---

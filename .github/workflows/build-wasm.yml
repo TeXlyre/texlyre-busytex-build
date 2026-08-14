@@ -6,7 +6,14 @@ on:
       busytexreleasetag:
         description: 'busytex native release tag'
         required: true
-        default: build_native_25cb7a9ae6f588003d82857b956e4965bea9a753_24562298930_1
+        default: build_native_65ee595ef82aa3dd324db210cd0d2827cc0d426e_31380263152_1
+      texlivefullreleasetag:
+        description: 'texlive-full release tag carrying the font assets'
+        required: true
+      biberwasmreleasetag:
+        description: 'biber wasm release tag from build-biber-wasm (leave empty to ship without biber)'
+        required: false
+        default: ''
       privaterepo:
         description: 'Use authenticated download (required for private repos)'
         type: boolean
@@ -41,7 +48,9 @@ jobs:
           df -h
 
       - name: Install Prerequisites
-        run: sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries
+        run: |
+          sudo apt-get update && sudo apt-get install -y gperf p7zip-full strace icu-devtools libarchive-tools libnsl-dev dos2unix bubblewrap texlive-binaries fonts-dejavu-core
+          python3 -m pip install --break-system-packages fonttools || python3 -m pip install fonttools
 
       - uses: actions/checkout@v4
 
@@ -63,6 +72,17 @@ jobs:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
         run: make build/texlive-basic.txt build/texlive-recommended.txt build/texlive-extra.txt
 
+      - name: Install font assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/fontassets
+          gh release download '${{ github.event.inputs.texlivefullreleasetag }}' \
+            --repo "$GITHUB_REPOSITORY" --dir build/fontassets --clobber \
+            -p pdftex.map -p luaotfload-names.lua.gz
+          make install-font-assets
+
       - name: Clean-up texmf sources and ISO
         run: rm -rf source/texmfrepo source/texlive2026.iso
 
@@ -78,6 +98,17 @@ jobs:
         env:
             MAKEFLAGS: ${{env.MAKE_PARALLELISM}}
         run: make wasm
+
+      - name: Download biber wasm
+        if: ${{ github.event.inputs.biberwasmreleasetag != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.privaterepo }}" = "true" ]; then
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.biberwasmreleasetag }} download-biber-wasm-auth
+          else
+            make URLRELEASE=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ github.event.inputs.biberwasmreleasetag }} download-biber-wasm
+          fi
 
       - name: Create packages and dist
         run: |
@@ -96,9 +127,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          biber_assets=""
+          if [ -f build/wasm/biber.js ]; then
+            biber_assets="web/busytex_biber.js build/wasm/biber.js build/wasm/biber.wasm build/wasm/biber.data"
+          fi
           chown $(whoami) -R . && gh --version && gh release create \
             build_wasm_${{github.sha}}_${{ github.run_id }}_${{ github.run_attempt }} \
             -t "Wasm assets" \
+            $biber_assets \
             web/busytex_pipeline.js \
             web/busytex_worker.js \
             build/versions.txt \
