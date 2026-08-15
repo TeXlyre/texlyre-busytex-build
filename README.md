@@ -11,8 +11,7 @@ To run the package server, refer to the [TeX Live server instructions](/texlive-
 * xetex, pdftex, luahbtex
 * bibtex8, xdvipdfmx, makeindex
 * kpsewhich, kpsestat, kpseaccess, kpsereadlink
-
-biber is included as a separate module, built and loaded on demand. See the [biber build instructions](/biber/README.md).
+* biber is included as a separate module, built and loaded on demand. See the [biber build instructions](/biber/README.md).
 
 **Supported targets:** `x86_64-linux` (static, musl) and `wasm32`.
 
@@ -141,16 +140,19 @@ Luaotfload rescanning is disabled, and `TEXMFCACHE` is pinned to the generated t
 
 ## Roadmap
 
-* mf-nowin
-* LuaMetaTeX / LMTX (lua)
-* tlmgr (perl)
-* mktexlsr, fmtutil, updmap (perl)
-
+* [ ] LuaMetaTeX / LMTX (lua)
+* [x] Biber (perl): **Completed**
+* ~fmtutil (perl)~: **Not planned**. Replaced by WASM-native format generation
+* ~tlmgr (perl)~: **Not planned**. Remote package fetching makes it unnecessary
+* ~mktexlsr~: **Not planned**. Remote file indexing replaces runtime `ls-R` rebuilds
+* ~mf-nowin~: **Not planned**. Legacy bitmap font generation not required
+* ~updmap~: **Not planned**. Font maps are prebuilt at build time
+  
 ---
 
 ## License
 
-TeXlyre-BusyTeX and the modifications applied to the build pipeline are licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). Based on [busytex](https://github.com/busytex/busytex) (MIT). See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+TeXlyre-BusyTeX and the modifications applied to the build pipeline are licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). Based on [busytex](https://github.com/busytex/busytex) ([MIT](https://github.com/busytex/busytex#license)). See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 ---
 
