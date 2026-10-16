@@ -425,8 +425,22 @@ class BusytexPipeline {
                 Module.output_stdout = '';
                 Module.output_stderr = '';
                 Module.setPrefix(args[0]);
-                const exit_code = Module.callMain(args);
-                Module._flush_streams();
+
+                // The applets exit without closing their files, and restoring the memory header between runs
+                // discards libc's FILE table but not FS.streams, so every run leaks its open files. With
+                // preload the module is reused across compiles, and once 4096 streams are open (Emscripten's
+                // limit) later runs fail to open fonts. Close whatever this run left open.
+                const open_before = new Set(Module.FS.streams.filter(stream => stream).map(stream => stream.fd));
+                let exit_code;
+                try {
+                    exit_code = Module.callMain(args);
+                    Module._flush_streams();
+                }
+                finally {
+                    for (const stream of Module.FS.streams)
+                        if (stream && !open_before.has(stream.fd))
+                            Module.FS.close(stream);
+                }
 
                 return { exit_code: exit_code, stdout: Module.output_stdout, stderr: Module.output_stderr };
             }
